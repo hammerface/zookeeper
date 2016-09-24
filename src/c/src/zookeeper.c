@@ -42,6 +42,7 @@
 #include <limits.h>
 
 #ifndef _WIN32
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <poll.h>
@@ -67,6 +68,267 @@
 #include <mach/clock.h>
 #include <mach/mach.h>
 #endif
+
+/* civetweb ssl */
+
+#define MG_BUF_LEN (8192) /* fix me */ 
+
+#pragma GCC diagnostic ignored "-Wunused-function"
+
+#if defined(_WIN64)
+
+#define ERRNO ((int)(GetLastError()))
+static struct pthread_mutex_undefined_struct *pthread_mutex_attr = NULL;
+
+
+#if defined(__MINGW64__)
+#define SSL_LIB "ssleay64.dll"
+#define CRYPTO_LIB "libeay64.dll"
+#else
+#define SSL_LIB "ssleay32.dll"
+#define CRYPTO_LIB "libeay32.dll"
+#endif
+
+#else /* defined(_WIN32) WINDOWS / UNIX include block */
+
+#define closesocket(a) (close(a))
+#define ERRNO (errno)
+#define SHUTDOWN_RD (0)
+#define SHUTDOWN_WR (1)
+#define SHUTDOWN_BOTH (2)
+typedef int SOCKET;
+static pthread_mutexattr_t pthread_mutex_attr;
+
+#if !defined(NO_SSL_DL) && !defined(NO_SSL)
+#include <dlfcn.h>
+#endif
+#include <pthread.h>
+#if defined(__MACH__)
+#define SSL_LIB "libssl.dylib"
+#define CRYPTO_LIB "libcrypto.dylib"
+#else
+#if !defined(SSL_LIB)
+#define SSL_LIB "libssl.so"
+#endif
+#if !defined(CRYPTO_LIB)
+#define CRYPTO_LIB "libcrypto.so"
+#endif
+
+#endif	/* (__MACH__) */
+#endif	/* (_WIN64) */
+
+
+#if !defined(NO_SSL)
+#if !defined(NO_SSL_DL)
+
+#define SSL_CTRL_OPTIONS (32)
+#define SSL_CTRL_CLEAR_OPTIONS (77)
+#define SSL_CTRL_SET_ECDH_AUTO (94)
+
+#define SSL_VERIFY_NONE (0)
+#define SSL_VERIFY_PEER (1)
+#define SSL_VERIFY_FAIL_IF_NO_PEER_CERT (2)
+#define SSL_VERIFY_CLIENT_ONCE (4)
+#define SSL_OP_ALL ((long)(0x80000BFFUL))
+#define SSL_OP_NO_SSLv2 (0x01000000L)
+#define SSL_OP_NO_SSLv3 (0x02000000L)
+#define SSL_OP_NO_TLSv1 (0x04000000L)
+#define SSL_OP_NO_TLSv1_2 (0x08000000L)
+#define SSL_OP_NO_TLSv1_1 (0x10000000L)
+#define SSL_OP_SINGLE_DH_USE (0x00100000L)
+#define SSL_OP_CIPHER_SERVER_PREFERENCE (0x00400000L)
+#define SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION (0x00010000L)
+
+#define SSL_ERROR_NONE (0)
+#define SSL_ERROR_SSL (1)
+#define SSL_ERROR_WANT_READ (2)
+#define SSL_ERROR_WANT_WRITE (3)
+#define SSL_ERROR_WANT_X509_LOOKUP (4)
+#define SSL_ERROR_SYSCALL (5) /* see errno */
+#define SSL_ERROR_ZERO_RETURN (6)
+#define SSL_ERROR_WANT_CONNECT (7)
+#define SSL_ERROR_WANT_ACCEPT (8)
+
+#define MD5_STATIC static
+#include "md5.inl"
+
+typedef struct _ssl_param_names {
+  const char *name;
+  const int idx;
+} ssl_param_names_t;
+
+
+struct ssl_func {
+	const char *name;  /* SSL function name */
+	void (*ptr)(void); /* Function pointer */
+};
+
+#define SSL_free (*(void (*)(SSL *))ssl_sw[0].ptr)
+#define SSL_accept (*(int (*)(SSL *))ssl_sw[1].ptr)
+#define SSL_connect (*(int (*)(SSL *))ssl_sw[2].ptr)
+#define SSL_read (*(int (*)(SSL *, void *, int))ssl_sw[3].ptr)
+#define SSL_write (*(int (*)(SSL *, const void *, int))ssl_sw[4].ptr)
+#define SSL_get_error (*(int (*)(SSL *, int))ssl_sw[5].ptr)
+#define SSL_set_fd (*(int (*)(SSL *, SOCKET))ssl_sw[6].ptr)
+#define SSL_new (*(SSL * (*)(SSL_CTX *))ssl_sw[7].ptr)
+#define SSL_CTX_new (*(SSL_CTX * (*)(SSL_METHOD *))ssl_sw[8].ptr)
+#define SSLv23_server_method (*(SSL_METHOD * (*)(void))ssl_sw[9].ptr)
+#define SSL_library_init (*(int (*)(void))ssl_sw[10].ptr)
+#define SSL_CTX_use_PrivateKey_file                                            \
+	(*(int (*)(SSL_CTX *, const char *, int))ssl_sw[11].ptr)
+#define SSL_CTX_use_certificate_file                                           \
+	(*(int (*)(SSL_CTX *, const char *, int))ssl_sw[12].ptr)
+#define SSL_CTX_set_default_passwd_cb                                          \
+	(*(void (*)(SSL_CTX *, mg_callback_t))ssl_sw[13].ptr)
+#define SSL_CTX_free (*(void (*)(SSL_CTX *))ssl_sw[14].ptr)
+#define SSL_load_error_strings (*(void (*)(void))ssl_sw[15].ptr)
+#define SSL_CTX_use_certificate_chain_file                                     \
+	(*(int (*)(SSL_CTX *, const char *))ssl_sw[16].ptr)
+#define SSLv23_client_method (*(SSL_METHOD * (*)(void))ssl_sw[17].ptr)
+#define SSL_pending (*(int (*)(SSL *))ssl_sw[18].ptr)
+#define SSL_CTX_set_verify                                                     \
+	(*(void (*)(SSL_CTX *,                                                     \
+	            int,                                                           \
+	            int (*verify_callback)(int, X509_STORE_CTX *)))ssl_sw[19].ptr)
+#define SSL_shutdown (*(int (*)(SSL *))ssl_sw[20].ptr)
+#define SSL_CTX_load_verify_locations                                          \
+	(*(int (*)(SSL_CTX *, const char *, const char *))ssl_sw[21].ptr)
+#define SSL_CTX_set_default_verify_paths (*(int (*)(SSL_CTX *))ssl_sw[22].ptr)
+#define SSL_CTX_set_verify_depth (*(void (*)(SSL_CTX *, int))ssl_sw[23].ptr)
+#define SSL_get_peer_certificate (*(X509 * (*)(SSL *))ssl_sw[24].ptr)
+#define SSL_get_version (*(const char *(*)(SSL *))ssl_sw[25].ptr)
+#define SSL_get_current_cipher (*(SSL_CIPHER * (*)(SSL *))ssl_sw[26].ptr)
+#define SSL_CIPHER_get_name                                                    \
+	(*(const char *(*)(const SSL_CIPHER *))ssl_sw[27].ptr)
+#define SSL_CTX_check_private_key (*(int (*)(SSL_CTX *))ssl_sw[28].ptr)
+#define SSL_CTX_set_session_id_context                                         \
+	(*(int (*)(SSL_CTX *, const unsigned char *, unsigned int))ssl_sw[29].ptr)
+#define SSL_CTX_ctrl (*(long (*)(SSL_CTX *, int, long, void *))ssl_sw[30].ptr)
+
+
+#define SSL_CTX_set_cipher_list                                                \
+	(*(int (*)(SSL_CTX *, const char *))ssl_sw[31].ptr)
+#define SSL_CTX_set_options(ctx, op)                                           \
+	SSL_CTX_ctrl((ctx), SSL_CTRL_OPTIONS, (op), NULL)
+#define SSL_CTX_clear_options(ctx, op)                                         \
+	SSL_CTX_ctrl((ctx), SSL_CTRL_CLEAR_OPTIONS, (op), NULL)
+#define SSL_CTX_set_ecdh_auto(ctx, onoff)                                      \
+	SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff, NULL)
+
+#define X509_get_notBefore(x) ((x)->cert_info->validity->notBefore)
+#define X509_get_notAfter(x) ((x)->cert_info->validity->notAfter)
+
+
+#define CRYPTO_num_locks (*(int (*)(void))crypto_sw[0].ptr)
+#define CRYPTO_set_locking_callback                                            \
+	(*(void (*)(void (*)(int, int, const char *, int)))crypto_sw[1].ptr)
+#define CRYPTO_set_id_callback                                                 \
+	(*(void (*)(unsigned long (*)(void)))crypto_sw[2].ptr)
+#define ERR_get_error (*(unsigned long (*)(void))crypto_sw[3].ptr)
+#define ERR_error_string (*(char *(*)(unsigned long, char *))crypto_sw[4].ptr)
+#define ERR_remove_state (*(void (*)(unsigned long))crypto_sw[5].ptr)
+#define ERR_free_strings (*(void (*)(void))crypto_sw[6].ptr)
+#define ENGINE_cleanup (*(void (*)(void))crypto_sw[7].ptr)
+#define CONF_modules_unload (*(void (*)(int))crypto_sw[8].ptr)
+#define CRYPTO_cleanup_all_ex_data (*(void (*)(void))crypto_sw[9].ptr)
+#define EVP_cleanup (*(void (*)(void))crypto_sw[10].ptr)
+#define X509_free (*(void (*)(X509 *))crypto_sw[11].ptr)
+#define X509_get_subject_name (*(X509_NAME * (*)(X509 *))crypto_sw[12].ptr)
+#define X509_get_issuer_name (*(X509_NAME * (*)(X509 *))crypto_sw[13].ptr)
+#define X509_NAME_oneline                                                      \
+	(*(char *(*)(X509_NAME *, char *, int))crypto_sw[14].ptr)
+#define X509_get_serialNumber (*(ASN1_INTEGER * (*)(X509 *))crypto_sw[15].ptr)
+#define i2c_ASN1_INTEGER                                                       \
+	(*(int (*)(ASN1_INTEGER *, unsigned char **))crypto_sw[16].ptr)
+#define EVP_get_digestbyname                                                   \
+	(*(const EVP_MD *(*)(const char *))crypto_sw[17].ptr)
+#define ASN1_digest                                                            \
+	(*(int (*)(int (*)(),                                                      \
+	           const EVP_MD *,                                                 \
+	           char *,                                                         \
+	           unsigned char *,                                                \
+	           unsigned int *))crypto_sw[18].ptr)
+#define i2d_X509 (*(int (*)(X509 *, unsigned char **))crypto_sw[19].ptr)
+
+
+/* set_ssl_option() function updates this array.
+ * It loads SSL library dynamically and changes NULLs to the actual addresses
+ * of respective functions. The macros above (like SSL_connect()) are really
+ * just calling these functions indirectly via the pointer. */
+static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
+                                   {"SSL_accept", NULL},
+                                   {"SSL_connect", NULL},
+                                   {"SSL_read", NULL},
+                                   {"SSL_write", NULL},
+                                   {"SSL_get_error", NULL},
+                                   {"SSL_set_fd", NULL},
+                                   {"SSL_new", NULL},
+                                   {"SSL_CTX_new", NULL},
+                                   {"SSLv23_server_method", NULL},
+                                   {"SSL_library_init", NULL},
+                                   {"SSL_CTX_use_PrivateKey_file", NULL},
+                                   {"SSL_CTX_use_certificate_file", NULL},
+                                   {"SSL_CTX_set_default_passwd_cb", NULL},
+                                   {"SSL_CTX_free", NULL},
+                                   {"SSL_load_error_strings", NULL},
+                                   {"SSL_CTX_use_certificate_chain_file", NULL},
+                                   {"SSLv23_client_method", NULL},
+                                   {"SSL_pending", NULL},
+                                   {"SSL_CTX_set_verify", NULL},
+                                   {"SSL_shutdown", NULL},
+                                   {"SSL_CTX_load_verify_locations", NULL},
+                                   {"SSL_CTX_set_default_verify_paths", NULL},
+                                   {"SSL_CTX_set_verify_depth", NULL},
+                                   {"SSL_get_peer_certificate", NULL},
+                                   {"SSL_get_version", NULL},
+                                   {"SSL_get_current_cipher", NULL},
+                                   {"SSL_CIPHER_get_name", NULL},
+                                   {"SSL_CTX_check_private_key", NULL},
+                                   {"SSL_CTX_set_session_id_context", NULL},
+                                   {"SSL_CTX_ctrl", NULL},
+                                   {"SSL_CTX_set_cipher_list", NULL},
+                                   {NULL, NULL}};
+
+
+/* Similar array as ssl_sw. These functions could be located in different
+ * lib. */
+static struct ssl_func crypto_sw[] = {{"CRYPTO_num_locks", NULL},
+                                      {"CRYPTO_set_locking_callback", NULL},
+                                      {"CRYPTO_set_id_callback", NULL},
+                                      {"ERR_get_error", NULL},
+                                      {"ERR_error_string", NULL},
+                                      {"ERR_remove_state", NULL},
+                                      {"ERR_free_strings", NULL},
+                                      {"ENGINE_cleanup", NULL},
+                                      {"CONF_modules_unload", NULL},
+                                      {"CRYPTO_cleanup_all_ex_data", NULL},
+                                      {"EVP_cleanup", NULL},
+                                      {"X509_free", NULL},
+                                      {"X509_get_subject_name", NULL},
+                                      {"X509_get_issuer_name", NULL},
+                                      {"X509_NAME_oneline", NULL},
+                                      {"X509_get_serialNumber", NULL},
+                                      {"i2c_ASN1_INTEGER", NULL},
+                                      {"EVP_get_digestbyname", NULL},
+                                      {"ASN1_digest", NULL},
+                                      {"i2d_X509", NULL},
+                                      {NULL, NULL}};
+#endif /* NO_SSL_DL */
+#endif /* NO_SSL */
+
+/* params to add */
+/* 	SSL_CERTIFICATE,
+	SSL_DO_VERIFY_PEER,
+	SSL_CA_PATH,
+	SSL_CA_FILE,
+	SSL_VERIFY_DEPTH,
+	SSL_DEFAULT_VERIFY_PATHS,
+	SSL_CIPHER_LIST,
+	SSL_PROTOCOL_VERSION,
+	SSL_SHORT_TRUST,
+ */
+
+/* civetweb ssl end */
 
 #define IF_DEBUG(x) if(logLevel==ZOO_LOG_LEVEL_DEBUG) {x;}
 
@@ -255,12 +517,172 @@ static void zookeeper_set_sock_nodelay(zhandle_t *, socket_t);
 static void zookeeper_set_sock_noblock(zhandle_t *, socket_t);
 static void zookeeper_set_sock_timeout(zhandle_t *, socket_t, int);
 static socket_t zookeeper_connect(zhandle_t *, struct sockaddr_storage *, socket_t);
+static sendsize_t zookeeper_recv(zhandle_t *, socket_t, void *, size_t);
+static void zookeeper_close_sock(zhandle_t *, socket_t);
+static void zookeeper_ssl_opts(zhandle_t *);
+static int mg_atomic_inc(volatile int *);
+static int mg_atomic_dec(volatile int *);
+static int set_non_blocking_mode(SOCKET);
 
-
-static sendsize_t zookeeper_send(socket_t s, const void* buf, size_t len)
+static sendsize_t zookeeper_send(zhandle_t *zh, socket_t s, const void* buf, size_t len)
 {
-    return send(s, buf, len, SEND_FLAGS);
+  sendsize_t n;
+  /* civetweb ssl addition */
+#ifdef NO_SSL
+  if (zh && zh->ssl) {
+    return -1;
+  }
+#endif
+
+#ifndef NO_SSL
+  int err;
+  if (zh && zh->ssl) {
+    n = SSL_write(zh->ssl, buf, len);
+    if (n <= 0) {
+      err = SSL_get_error(zh->ssl, n);
+      if ((err == SSL_ERROR_SYSCALL) && (n == -1)) {
+	err = ERRNO;
+      } else if ((err == SSL_ERROR_WANT_READ)
+		 || (err == SSL_ERROR_WANT_WRITE)) {
+	n = 0;
+      } else {
+	/* errno not being used */
+	//	  DEBUG_TRACE("SSL_write() failed, error %d", err);
+	return -1;
+      }
+    } else {
+      err = 0;
+    }
+  } else
+#endif
+    {
+      n = send(s, buf, len, SEND_FLAGS);
+    }
+    
+  return n;
 }
+
+
+static sendsize_t zookeeper_recv(zhandle_t *zh, socket_t s, void *buf, size_t len)
+{
+    sendsize_t n;
+    /* civetweb ssl addition */
+#ifdef NO_SSL
+  if (zh && zh->ssl) {
+    return -1;
+  }
+#endif
+
+#ifndef NO_SSL
+  int err;
+  if (zh && zh->ssl) {
+    n = SSL_read(zh->ssl, buf, len);
+    if (n <= 0) {
+      err = SSL_get_error(zh->ssl, n);
+      if ((err == SSL_ERROR_SYSCALL) && (n == -1)) {
+	err = ERRNO;
+      } else if ((err == SSL_ERROR_WANT_READ)
+		 || (err == SSL_ERROR_WANT_WRITE)) {
+	n = 0;
+      } else {
+	/* fix me */
+	//DEBUG_TRACE("SSL_read() failed, error %d", err);
+	return -1;
+      }
+    } else {
+      err = 0;
+    }
+  } else
+#endif
+    {
+      n = recv(s, buf, len, 0);
+    }
+
+//printf("zookeeper_recv %d\n", (int)n);
+  return n;
+}
+
+
+
+static void
+zookeeper_close_gracefully(zhandle_t *zh, socket_t s)
+{
+#if defined(_WIN32)
+	char buf[MG_BUF_LEN];
+	int n;
+#endif
+	struct linger linger;
+	int error_code = 0;
+	socklen_t opt_len = sizeof(error_code);
+
+	if (!zh) {
+		return;
+	}
+
+	/* Set linger option to avoid socket hanging out after close. This
+	 * prevent ephemeral port exhaust problem under high QPS. */
+	linger.l_onoff = 1;
+	linger.l_linger = 1;
+
+	getsockopt(s, SOL_SOCKET, SO_ERROR, (char *)&error_code, &opt_len);
+
+	if (error_code == ECONNRESET) {
+		/* Socket already closed by client/peer, close socket without linger */
+	} else {
+		if (setsockopt(s,
+		               SOL_SOCKET,
+		               SO_LINGER,
+		               (char *)&linger,
+		               sizeof(linger)) != 0) {
+			LOG_ERROR(LOGCALLBACK(zh),
+			       "%s: setsockopt(SOL_SOCKET SO_LINGER) failed: %s",
+			       __func__,
+			       strerror(ERRNO));
+		}
+	}
+
+	/* Send FIN to the client */
+	shutdown(s, SHUTDOWN_WR);
+	set_non_blocking_mode(s);
+
+#if defined(_WIN32)
+	/* Read and discard pending incoming data. If we do not do that and
+	 * close
+	 * the socket, the data in the send buffer may be discarded. This
+	 * behaviour is seen on Windows, when client keeps sending data
+	 * when server decides to close the connection; then when client
+	 * does recv() it gets no data back. */
+	do {
+	        /* NULL means no ssl */
+		n = zookeeper_recv(NULL, s, buf, sizeof(buf));
+	} while (n > 0);
+#endif
+
+	/* Now we know that our FIN is ACK-ed, safe to close */
+	closesocket(s);
+}
+
+static void zookeeper_close_sock(zhandle_t *zh, socket_t s)
+{
+    /* civetweb ssl addition */
+#ifndef NO_SSL
+  if (zh->ssl != NULL) {
+    /* Run SSL_shutdown twice to ensure completely close SSL connection
+     */
+    SSL_shutdown(zh->ssl);
+    SSL_shutdown(zh->ssl);
+    SSL_free(zh->ssl);
+    /* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
+     * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
+    ERR_remove_state(0);
+    zh->ssl = NULL;
+  }
+#endif
+  /* unconditionally close socket */
+  zookeeper_close_gracefully(zh, s);
+}
+
+
 
 /**
  * Get the system time.
@@ -505,7 +927,7 @@ static void destroy(zhandle_t *zh)
         zh->hostname = NULL;
     }
     if (zh->fd != -1) {
-        close(zh->fd);
+      zookeeper_close_sock(zh, zh->fd);
         zh->fd = -1;
         memset(&zh->addr_cur, 0, sizeof(zh->addr_cur));
         zh->state = 0;
@@ -958,7 +1380,7 @@ int update_addrs(zhandle_t *zh)
     // new connection
     if (zh->reconfig == 1 && zh->fd != -1)
     {
-        close(zh->fd);
+      zookeeper_close_sock(zh, zh->fd);
         zh->fd = -1;
         zh->state = ZOO_NOTCONNECTED_STATE;
     }
@@ -1079,6 +1501,7 @@ static zhandle_t *zookeeper_init_internal(const char *host, watcher_fn watcher,
         int recv_timeout, const clientid_t *clientid, void *context, int flags,
         log_callback_fn log_callback)
 {
+    int i;
     int errnosave = 0;
     zhandle_t *zh = NULL;
     char *index_chroot = NULL;
@@ -1178,6 +1601,18 @@ static zhandle_t *zookeeper_init_internal(const char *host, watcher_fn watcher,
     zh->active_exist_watchers=create_zk_hashtable();
     zh->active_child_watchers=create_zk_hashtable();
 
+    zh->is_ssl = 0;
+    zh->ssl_ctx = NULL;
+    zh->ssl = NULL;
+    
+    for (i = 0; i < SSL_NUM_OPTIONS; ++i) {
+      zh->ssl_config[i] = NULL;
+    }
+    
+    zh->peer_cert = NULL;
+
+    zookeeper_ssl_opts(zh);
+    
     if (adaptor_init(zh) == -1) {
         goto abort;
     }
@@ -1490,7 +1925,7 @@ static __attribute__ ((unused)) int get_queue_len(buffer_head_t *list)
  * 0 if send would block while sending the buffer (or a send was incomplete),
  * 1 if success
  */
-static int send_buffer(socket_t fd, buffer_list_t *buff)
+static int send_buffer(zhandle_t *zh, socket_t fd, buffer_list_t *buff)
 {
     int len = buff->len;
     int off = buff->curr_offset;
@@ -1500,7 +1935,7 @@ static int send_buffer(socket_t fd, buffer_list_t *buff)
         /* we need to send the length at the beginning */
         int nlen = htonl(len);
         char *b = (char*)&nlen;
-        rc = zookeeper_send(fd, b + off, sizeof(nlen) - off);
+        rc = zookeeper_send(zh, fd, b + off, sizeof(nlen) - off);
         if (rc == -1) {
 #ifdef _WIN32
             if (WSAGetLastError() != WSAEWOULDBLOCK) {
@@ -1519,7 +1954,7 @@ static int send_buffer(socket_t fd, buffer_list_t *buff)
     if (off >= 4) {
         /* want off to now represent the offset into the buffer */
         off -= sizeof(buff->len);
-        rc = zookeeper_send(fd, buff->buffer + off, len - off);
+        rc = zookeeper_send(zh, fd, buff->buffer + off, len - off);
         if (rc == -1) {
 #ifdef _WIN32
             if (WSAGetLastError() != WSAEWOULDBLOCK) {
@@ -1548,7 +1983,7 @@ static int recv_buffer(zhandle_t *zh, buffer_list_t *buff)
     /* if buffer is less than 4, we are reading in the length */
     if (off < 4) {
         char *buffer = (char*)&(buff->len);
-        rc = recv(zh->fd, buffer+off, sizeof(int)-off, 0);
+        rc = zookeeper_recv(zh, zh->fd, buffer+off, sizeof(int)-off);
         switch (rc) {
         case 0:
             errno = EHOSTDOWN;
@@ -1574,7 +2009,7 @@ static int recv_buffer(zhandle_t *zh, buffer_list_t *buff)
         /* want off to now represent the offset into the buffer */
         off -= sizeof(buff->len);
 
-        rc = recv(zh->fd, buff->buffer+off, buff->len-off, 0);
+        rc = zookeeper_recv(zh, zh->fd, buff->buffer+off, buff->len-off);
 
         /* dirty hack to make new client work against old server
          * old server sends 40 bytes to finish connection handshake,
@@ -1690,7 +2125,7 @@ static int is_connected(zhandle_t* zh)
 
 static void handle_error(zhandle_t *zh,int rc)
 {
-    close(zh->fd);
+  zookeeper_close_sock(zh, zh->fd);
     if (is_unrecoverable(zh)) {
         LOG_DEBUG(LOGCALLBACK(zh), "Calling a watcher for a ZOO_SESSION_EVENT and the state=%s",
                 state2String(zh->state));
@@ -1961,9 +2396,9 @@ static int prime_connection(zhandle_t *zh)
     req.readOnly = zh->allow_read_only;
     hlen = htonl(len);
     /* We are running fast and loose here, but this string should fit in the initial buffer! */
-    rc=zookeeper_send(zh->fd, &hlen, sizeof(len));
+    rc=zookeeper_send(zh, zh->fd, &hlen, sizeof(len));
     serialize_prime_connect(&req, buffer_req);
-    rc=rc<0 ? rc : zookeeper_send(zh->fd, buffer_req, len);
+    rc=rc<0 ? rc : zookeeper_send(zh, zh->fd, buffer_req, len);
     if (rc<0) {
         return handle_socket_error_msg(zh, __LINE__, ZCONNECTIONLOSS,
                 "failed to send a handshake packet: %s", strerror(errno));
@@ -2054,14 +2489,14 @@ static int ping_rw_server(zhandle_t* zh)
         return 0;
     }
 
-    ssize = zookeeper_send(sock, "isro", 4);
+    ssize = zookeeper_send(zh, sock, "isro", 4);
     if (ssize < 0) {
         rc = 0;
         goto out;
     }
 
     memset(buf, 0, sizeof(buf));
-    rc = recv(sock, buf, sizeof(buf), 0);
+    rc = zookeeper_recv(zh, sock, buf, sizeof(buf));
     if (rc < 0) {
         rc = 0;
         goto out;
@@ -2070,7 +2505,7 @@ static int ping_rw_server(zhandle_t* zh)
     rc = strcmp("rw", buf) == 0;
 
 out:
-    close(sock);
+    zookeeper_close_sock(zh, sock);
     return rc;
 }
 
@@ -2137,6 +2572,7 @@ static socket_t zookeeper_connect(zhandle_t *zh,
     addr_len = sizeof(struct sockaddr_in);
 #endif
 
+    /* civetweb fixme - check for use_ssl && (SSLv23_client_method == NULL */
     LOG_DEBUG(LOGCALLBACK(zh), "[zk] connect()\n");
     rc = connect(fd, (struct sockaddr *)addr, addr_len);
 
@@ -2435,7 +2871,7 @@ void api_prolog(zhandle_t* zh)
 int api_epilog(zhandle_t *zh,int rc)
 {
     if(inc_ref_counter(zh,-1)==0 && zh->close_requested!=0)
-        zookeeper_close(zh);
+      zookeeper_close(zh);
     return rc;
 }
 
@@ -4175,7 +4611,7 @@ int flush_send_queue(zhandle_t*zh, int timeout)
             }
         }
 
-        rc = send_buffer(zh->fd, zh->to_send.head);
+        rc = send_buffer(zh, zh->fd, zh->to_send.head);
         if(rc==0 && timeout==0){
             /* send_buffer would block while sending this buffer */
             rc = ZOK;
@@ -4766,3 +5202,871 @@ done:
     free_duplicate_path(server_path, path);
     return rc;
 }
+
+/* civetweb ssl additions */
+
+
+
+/* block of windows followed by unix */
+#if defined(_WIN32) || defined(_WIN64)
+
+static int
+set_non_blocking_mode(SOCKET sock)
+{
+	unsigned long on = 1;
+	return ioctlsocket(sock, (long)FIONBIO, &on);
+}
+ 
+#if !defined(NO_SSL_DL) && !defined(NO_SSL)
+/* If SSL is loaded dynamically, dlopen/dlclose is required. */
+/* Create substitutes for POSIX functions in Win32. */
+ 
+#if defined(__MINGW32__)
+/* Show no warning in case system functions are not used. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif	/* defined(__MINGW32__) */
+
+static HANDLE
+dlopen(const char *dll_name, int flags)
+{
+	wchar_t wbuf[PATH_MAX];
+	(void)flags;
+	path_to_unicode(NULL, dll_name, wbuf, ARRAY_SIZE(wbuf));
+	return LoadLibraryW(wbuf);
+}
+
+
+static int
+dlclose(void *handle)
+{
+	int result;
+
+	if (FreeLibrary((HMODULE)handle) != 0) {
+		result = 0;
+	} else {
+		result = -1;
+	}
+
+	return result;
+}
+
+#if defined(__MINGW32__)
+/* Enable unused function warning again */
+#pragma GCC diagnostic pop
+#endif	/* defined(__MINGW32__) */
+#pragma message "windows block"
+
+#endif	/* !defined(NO_SSL_DL) && !defined(NO_SSL) */
+ 
+#else  /* unix block */
+
+static int
+set_non_blocking_mode(SOCKET sock)
+{
+	int flags;
+
+	flags = fcntl(sock, F_GETFL, 0);
+	(void)fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+
+	return 0;
+}
+
+ 
+#endif 	/* defined(_WIN32) || defined(_WIN64) */
+ 
+
+
+
+
+
+#if !defined(NO_SSL)
+
+/* Must be set if sizeof(pthread_t) > sizeof(unsigned long) */
+static unsigned long
+ssl_id_callback(void)
+{
+#ifdef _WIN32
+	return GetCurrentThreadId();
+#else
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunreachable-code"
+/* For every compiler, either "sizeof(pthread_t) > sizeof(unsigned long)"
+ * or not, so one of the two conditions will be unreachable by construction.
+ * Unfortunately the C standard does not define a way to check this at
+ * compile time, since the #if preprocessor conditions can not use the sizeof
+ * operator as an argument. */
+#endif
+
+#if 0 /* fix me */
+	if (sizeof(pthread_t) > sizeof(unsigned long)) {
+		/* This is the problematic case for CRYPTO_set_id_callback:
+		 * The OS pthread_t can not be cast to unsigned long. */
+		struct mg_workerTLS *tls =
+		    (struct mg_workerTLS *)pthread_getspecific(sTlsKey);
+		if (tls == NULL) {
+			/* SSL called from an unknown thread: Create some thread index.
+			 */
+			tls = (struct mg_workerTLS *)malloc(sizeof(struct mg_workerTLS));
+			tls->is_master = -2; /* -2 means "3rd party thread" */
+			tls->thread_idx = (unsigned)mg_atomic_inc(&thread_idx_max);
+			pthread_setspecific(sTlsKey, tls);
+		}
+		return tls->thread_idx;
+	} else {
+		/* pthread_t may be any data type, so a simple cast to unsigned long
+		 * can rise a warning/error, depending on the platform.
+		 * Here memcpy is used as an anything-to-anything cast. */
+		unsigned long ret = 0;
+		pthread_t t = pthread_self();
+		memcpy(&ret, &t, sizeof(pthread_t));
+		return ret;
+	}
+#endif	/* 0 */
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
+#endif
+	return 0;
+}
+
+
+static int ssl_use_pem_file(zhandle_t *zh, const char *pem);
+static const char *ssl_error(void);
+
+
+static int
+refresh_trust(zhandle_t *zh)
+{
+	static int reload_lock = 0;
+	static long int data_check = 0;
+	volatile int *p_reload_lock = (volatile int *)&reload_lock;
+
+	struct stat cert_buf;
+	long int t;
+	char *pem;
+	int should_verify_peer;
+
+	if ((pem = zh->ssl_config[SSL_CERTIFICATE]) == NULL) {
+		return 0;
+	}
+
+	t = data_check;
+	if (stat(pem, &cert_buf) != -1) {
+		t = (long int)cert_buf.st_mtime;
+	}
+
+	if (data_check != t) {
+		data_check = t;
+
+		should_verify_peer =
+		    (zh->ssl_config[SSL_DO_VERIFY_PEER] != NULL)
+		    && (strcmp(zh->ssl_config[SSL_DO_VERIFY_PEER], "yes")
+		        == 0);
+
+		if (should_verify_peer) {
+			char *ca_path = zh->ssl_config[SSL_CA_PATH];
+			char *ca_file = zh->ssl_config[SSL_CA_FILE];
+			if (SSL_CTX_load_verify_locations(zh->ssl_ctx,
+			                                  ca_file,
+			                                  ca_path) != 1) {
+				LOG_ERROR(LOGCALLBACK(zh),
+				       "SSL_CTX_load_verify_locations error: %s "
+				       "ssl_verify_peer requires setting "
+				       "either ssl_ca_path or ssl_ca_file. Is any of them "
+				       "present in "
+				       "the .conf file?",
+				       ssl_error());
+				return 0;
+			}
+		}
+
+		if (1 == mg_atomic_inc(p_reload_lock)) {
+			if (ssl_use_pem_file(zh, pem) == 0) {
+				return 0;
+			}
+			*p_reload_lock = 0;
+		}
+	}
+	/* lock while cert is reloading */
+	while (*p_reload_lock) {
+		sleep(1);
+	}
+
+	return 1;
+}
+
+
+static pthread_mutex_t *ssl_mutexes;
+
+
+static int
+sslize(zhandle_t *zh, SOCKET sock, SSL_CTX *s, int (*func)(SSL *))
+{
+	int ret, err;
+	int short_trust;
+	unsigned i;
+
+	if (!zh) {
+		return 0;
+	}
+
+	short_trust =
+	    (zh->ssl_config[SSL_SHORT_TRUST] != NULL)
+	    && (strcmp(zh->ssl_config[SSL_SHORT_TRUST], "yes") == 0);
+
+	if (short_trust) {
+		int trust_ret = refresh_trust(zh);
+		if (!trust_ret) {
+			return trust_ret;
+		}
+	}
+
+	zh->ssl = SSL_new(s);
+	if (zh->ssl == NULL) {
+		return 0;
+	}
+
+	ret = SSL_set_fd(zh->ssl, sock);
+	if (ret != 1) {
+		err = SSL_get_error(zh->ssl, ret);
+		(void)err; /* TODO: set some error message */
+		SSL_free(zh->ssl);
+		zh->ssl = NULL;
+		/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
+		 * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
+		ERR_remove_state(0);
+		return 0;
+	}
+
+	/* SSL functions may fail and require to be called again:
+	 * see https://www.openssl.org/docs/manmaster/ssl/SSL_get_error.html
+	 * Here "func" could be SSL_connect or SSL_accept. */
+	for (i = 0; i <= 16; i *= 2) {
+		ret = func(zh->ssl);
+		if (ret != 1) {
+			err = SSL_get_error(zh->ssl, ret);
+			if ((err == SSL_ERROR_WANT_CONNECT)
+			    || (err == SSL_ERROR_WANT_ACCEPT)) {
+				/* Retry */
+			  /* fix me */
+				//mg_sleep(i);
+
+			} else {
+				/* This is an error */
+				/* TODO: set some error message */
+				break;
+			}
+
+		} else {
+			/* success */
+			break;
+		}
+	}
+
+	if (ret != 1) {
+		SSL_free(zh->ssl);
+		zh->ssl = NULL;
+		/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
+		 * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
+		ERR_remove_state(0);
+		return 0;
+	}
+
+	return 1;
+}
+
+
+/* Return OpenSSL error message (from CRYPTO lib) */
+static const char *
+ssl_error(void)
+{
+	unsigned long err;
+	err = ERR_get_error();
+	return ((err == 0) ? "" : ERR_error_string(err, NULL));
+}
+
+
+static int
+hexdump2string(void *mem, int memlen, char *buf, int buflen)
+{
+	int i;
+	const char hexdigit[] = "0123456789abcdef";
+
+	if (memlen <= 0 || buflen <= 0) {
+		return 0;
+	}
+	if (buflen < (3 * memlen)) {
+		return 0;
+	}
+
+	for (i = 0; i < memlen; i++) {
+		if (i > 0) {
+			buf[3 * i - 1] = ' ';
+		}
+		buf[3 * i] = hexdigit[(((uint8_t *)mem)[i] >> 4) & 0xF];
+		buf[3 * i + 1] = hexdigit[((uint8_t *)mem)[i] & 0xF];
+	}
+	buf[3 * memlen - 1] = 0;
+
+	return 1;
+}
+
+
+static void
+ssl_get_peer_cert_info(zhandle_t *zh)
+{
+	X509 *cert = SSL_get_peer_certificate(zh->ssl);
+	if (cert) {
+		char str_subject[1024];
+		char str_issuer[1024];
+		char str_serial[1024];
+		char str_finger[1024];
+		unsigned char buf[256];
+		int len;
+		unsigned int ulen;
+
+		/* Handle to algorithm used for fingerprint */
+		const EVP_MD *digest = EVP_get_digestbyname("sha1");
+
+		/* Get Subject and issuer */
+		X509_NAME *subj = X509_get_subject_name(cert);
+		X509_NAME *iss = X509_get_issuer_name(cert);
+
+		/* Get serial number */
+		ASN1_INTEGER *serial = X509_get_serialNumber(cert);
+
+		/* Translate subject and issuer to a string */
+		(void)X509_NAME_oneline(subj, str_subject, (int)sizeof(str_subject));
+		(void)X509_NAME_oneline(iss, str_issuer, (int)sizeof(str_issuer));
+
+		/* Translate serial number to a hex string */
+		len = i2c_ASN1_INTEGER(serial, NULL);
+		if ((len > 0) && ((unsigned)len < (unsigned)sizeof(buf))) {
+			unsigned char *pbuf = buf;
+			int len2 = i2c_ASN1_INTEGER(serial, &pbuf);
+			if (!hexdump2string(
+			        buf, len2, str_serial, (int)sizeof(str_serial))) {
+				*str_serial = 0;
+			}
+		} else {
+			*str_serial = 0;
+		}
+
+		/* Calculate SHA1 fingerprint and store as a hex string */
+		ulen = 0;
+		ASN1_digest((int (*)())i2d_X509, digest, (char *)cert, buf, &ulen);
+		if (!hexdump2string(
+		        buf, (int)ulen, str_finger, (int)sizeof(str_finger))) {
+			*str_finger = 0;
+		}
+
+		zh->peer_cert = (peer_cert_t *)malloc(sizeof(peer_cert_t));
+		if (zh->peer_cert) {
+			zh->peer_cert->subject = strdup(str_subject);
+			zh->peer_cert->issuer = strdup(str_issuer);
+			zh->peer_cert->serial = strdup(str_serial);
+			zh->peer_cert->finger = strdup(str_finger);
+		} else {
+			/* TODO: write some OOM message */
+		}
+
+		X509_free(cert);
+	}
+}
+
+
+static void
+ssl_locking_callback(int mode, int mutex_num, const char *file, int line)
+{
+	(void)line;
+	(void)file;
+
+	if (mode & 1) {
+		/* 1 is CRYPTO_LOCK */
+		(void)pthread_mutex_lock(&ssl_mutexes[mutex_num]);
+	} else {
+		(void)pthread_mutex_unlock(&ssl_mutexes[mutex_num]);
+	}
+}
+
+
+#if !defined(NO_SSL_DL)
+static void *
+load_dll(zhandle_t *zh, const char *dll_name, struct ssl_func *sw)
+{
+	union {
+		void *p;
+		void (*fp)(void);
+	} u;
+	void *dll_handle;
+	struct ssl_func *fp;
+
+	if ((dll_handle = dlopen(dll_name, RTLD_LAZY)) == NULL) {
+		LOG_ERROR(LOGCALLBACK(zh), "%s: cannot load %s", __func__, dll_name);
+		return NULL;
+	}
+
+	for (fp = sw; fp->name != NULL; fp++) {
+#ifdef _WIN32
+		/* GetProcAddress() returns pointer to function */
+		u.fp = (void (*)(void))dlsym(dll_handle, fp->name);
+#else
+		/* dlsym() on UNIX returns void *. ISO C forbids casts of data
+		 * pointers to function pointers. We need to use a union to make a
+		 * cast. */
+		u.p = dlsym(dll_handle, fp->name);
+#endif /* _WIN32 */
+		if (u.fp == NULL) {
+			LOG_ERROR(LOGCALLBACK(zh),
+			       "%s: %s: cannot find %s",
+			       __func__,
+			       dll_name,
+			       fp->name);
+			dlclose(dll_handle);
+			return NULL;
+		} else {
+			fp->ptr = u.fp;
+		}
+	}
+
+	return dll_handle;
+}
+
+
+static void *ssllib_dll_handle;    /* Store the ssl library handle. */
+static void *cryptolib_dll_handle; /* Store the crypto library handle. */
+
+#endif /* NO_SSL_DL */
+
+
+#if defined(SSL_ALREADY_INITIALIZED)
+static int cryptolib_users = 1; /* Reference counter for crypto library. */
+#else
+static int cryptolib_users = 0; /* Reference counter for crypto library. */
+#endif
+
+
+static int
+initialize_ssl(zhandle_t *zh)
+{
+	int i;
+	size_t size;
+
+#if !defined(NO_SSL_DL)
+	if (!cryptolib_dll_handle) {
+		cryptolib_dll_handle = load_dll(zh, CRYPTO_LIB, crypto_sw);
+		if (!cryptolib_dll_handle) {
+			return 0;
+		}
+	}
+#endif /* NO_SSL_DL */
+
+	if (mg_atomic_inc(&cryptolib_users) > 1) {
+		return 1;
+	}
+
+	/* Initialize locking callbacks, needed for thread safety.
+	 * http://www.openssl.org/support/faq.html#PROG1
+	 */
+	i = CRYPTO_num_locks();
+	if (i < 0) {
+		i = 0;
+	}
+	size = sizeof(pthread_mutex_t) * ((size_t)(i));
+	if ((ssl_mutexes = (pthread_mutex_t *)malloc(size)) == NULL) {
+		LOG_ERROR(LOGCALLBACK(zh),
+		       "%s: cannot allocate mutexes: %s",
+		       __func__,
+		       ssl_error());
+		return 0;
+	}
+
+	for (i = 0; i < CRYPTO_num_locks(); i++) {
+		pthread_mutex_init(&ssl_mutexes[i], &pthread_mutex_attr);
+	}
+
+	CRYPTO_set_locking_callback(&ssl_locking_callback);
+	CRYPTO_set_id_callback(&ssl_id_callback);
+
+	return 1;
+}
+
+
+static int
+ssl_use_pem_file(zhandle_t *zh, const char *pem)
+{
+	if (SSL_CTX_use_certificate_file(zh->ssl_ctx, pem, 1) == 0) {
+		LOG_ERROR(LOGCALLBACK(zh),
+		       "%s: cannot open certificate file %s: %s",
+		       __func__,
+		       pem,
+		       ssl_error());
+		return 0;
+	}
+
+	/* could use SSL_CTX_set_default_passwd_cb_userdata */
+	if (SSL_CTX_use_PrivateKey_file(zh->ssl_ctx, pem, 1) == 0) {
+		LOG_ERROR(LOGCALLBACK(zh),
+		       "%s: cannot open private key file %s: %s",
+		       __func__,
+		       pem,
+		       ssl_error());
+		return 0;
+	}
+
+	if (SSL_CTX_check_private_key(zh->ssl_ctx) == 0) {
+		LOG_ERROR(LOGCALLBACK(zh),
+		       "%s: certificate and private key do not match: %s",
+		       __func__,
+		       pem);
+		return 0;
+	}
+
+	if (SSL_CTX_use_certificate_chain_file(zh->ssl_ctx, pem) == 0) {
+		LOG_ERROR(LOGCALLBACK(zh),
+		       "%s: cannot use certificate chain file %s: %s",
+		       __func__,
+		       pem,
+		       ssl_error());
+		return 0;
+	}
+	return 1;
+}
+
+
+static long
+ssl_get_protocol(int version_id)
+{
+	long ret = SSL_OP_ALL;
+	if (version_id > 0)
+		ret |= SSL_OP_NO_SSLv2;
+	if (version_id > 1)
+		ret |= SSL_OP_NO_SSLv3;
+	if (version_id > 2)
+		ret |= SSL_OP_NO_TLSv1;
+	if (version_id > 3)
+		ret |= SSL_OP_NO_TLSv1_1;
+	return ret;
+}
+
+
+/* Dynamically load SSL library. Set up zh->ssl_ctx pointer. */
+static int
+set_ssl_option(zhandle_t *zh)
+{
+	const char *pem;
+	int should_verify_peer;
+	const char *ca_path;
+	const char *ca_file;
+	int use_default_verify_paths;
+	int verify_depth;
+	time_t now_rt = time(NULL);
+	struct timespec now_mt;
+	md5_byte_t ssl_context_id[16];
+	md5_state_t md5state;
+	int protocol_ver;
+
+	/* If PEM file is not specified and the init_ssl callback
+	 * is not specified, skip SSL initialization. */
+	if (!zh) {
+		return 0;
+	}
+	if ((pem = zh->ssl_config[SSL_CERTIFICATE]) == NULL) {
+		return 1;
+	}
+
+	if (!initialize_ssl(zh)) {
+		return 0;
+	}
+
+#if !defined(NO_SSL_DL)
+	if (!ssllib_dll_handle) {
+		ssllib_dll_handle = load_dll(zh, SSL_LIB, ssl_sw);
+		if (!ssllib_dll_handle) {
+			return 0;
+		}
+	}
+#endif /* NO_SSL_DL */
+
+	/* Initialize SSL library */
+	SSL_library_init();
+	SSL_load_error_strings();
+
+	if ((zh->ssl_ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) {
+		LOG_ERROR(LOGCALLBACK(zh), "SSL_CTX_new (server) error: %s", ssl_error());
+		return 0;
+	}
+
+	SSL_CTX_clear_options(zh->ssl_ctx,
+	                      SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1
+	                          | SSL_OP_NO_TLSv1_1);
+	protocol_ver = atoi(zh->ssl_config[SSL_PROTOCOL_VERSION]);
+	SSL_CTX_set_options(zh->ssl_ctx, ssl_get_protocol(protocol_ver));
+	SSL_CTX_set_options(zh->ssl_ctx, SSL_OP_SINGLE_DH_USE);
+	SSL_CTX_set_options(zh->ssl_ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
+	SSL_CTX_set_ecdh_auto(zh->ssl_ctx, 1);
+
+	/* Use some UID as session context ID. */
+	md5_init(&md5state);
+	md5_append(&md5state, (const md5_byte_t *)&now_rt, sizeof(now_rt));
+	clock_gettime(CLOCK_MONOTONIC, &now_mt);
+	md5_append(&md5state, (const md5_byte_t *)&now_mt, sizeof(now_mt));
+	md5_append(&md5state, (const md5_byte_t *)zh, sizeof(*zh));
+	md5_finish(&md5state, ssl_context_id);
+
+	SSL_CTX_set_session_id_context(zh->ssl_ctx,
+	                               (const unsigned char *)&ssl_context_id,
+	                               sizeof(ssl_context_id));
+
+	if (pem != NULL) {
+		if (!ssl_use_pem_file(zh, pem)) {
+			return 0;
+		}
+	}
+
+	should_verify_peer =
+	    (zh->ssl_config[SSL_DO_VERIFY_PEER] != NULL)
+	    && (strcmp(zh->ssl_config[SSL_DO_VERIFY_PEER], "yes") == 0);
+
+	use_default_verify_paths =
+	    (zh->ssl_config[SSL_DEFAULT_VERIFY_PATHS] != NULL)
+	    && (strcmp(zh->ssl_config[SSL_DEFAULT_VERIFY_PATHS], "yes") == 0);
+
+	if (should_verify_peer) {
+		ca_path = zh->ssl_config[SSL_CA_PATH];
+		ca_file = zh->ssl_config[SSL_CA_FILE];
+		if (SSL_CTX_load_verify_locations(zh->ssl_ctx, ca_file, ca_path)
+		    != 1) {
+			LOG_ERROR(LOGCALLBACK(zh),
+			       "SSL_CTX_load_verify_locations error: %s "
+			       "ssl_verify_peer requires setting "
+			       "either ssl_ca_path or ssl_ca_file. Is any of them "
+			       "present in "
+			       "the .conf file?",
+			       ssl_error());
+			return 0;
+		}
+
+		SSL_CTX_set_verify(zh->ssl_ctx,
+		                   SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+		                   NULL);
+
+		if (use_default_verify_paths
+		    && SSL_CTX_set_default_verify_paths(zh->ssl_ctx) != 1) {
+			LOG_ERROR(LOGCALLBACK(zh),
+			       "SSL_CTX_set_default_verify_paths error: %s",
+			       ssl_error());
+			return 0;
+		}
+
+		if (zh->ssl_config[SSL_VERIFY_DEPTH]) {
+			verify_depth = atoi(zh->ssl_config[SSL_VERIFY_DEPTH]);
+			SSL_CTX_set_verify_depth(zh->ssl_ctx, verify_depth);
+		}
+	}
+
+	if (zh->ssl_config[SSL_CIPHER_LIST] != NULL) {
+		if (SSL_CTX_set_cipher_list(zh->ssl_ctx, zh->ssl_config[SSL_CIPHER_LIST])
+		    != 1) {
+			LOG_ERROR(LOGCALLBACK(zh), "SSL_CTX_set_cipher_list error: %s", ssl_error());
+		}
+	}
+
+	return 1;
+}
+
+
+static void
+uninitialize_ssl(zhandle_t *zh)
+{
+	int i;
+	(void)zh;
+
+	if (mg_atomic_dec(&cryptolib_users) == 0) {
+
+		/* Shutdown according to
+		 * https://wiki.openssl.org/index.php/Library_Initialization#Cleanup
+		 * http://stackoverflow.com/questions/29845527/how-to-properly-uninitialize-openssl
+		 */
+		CRYPTO_set_locking_callback(NULL);
+		CRYPTO_set_id_callback(NULL);
+		ENGINE_cleanup();
+		CONF_modules_unload(1);
+		ERR_free_strings();
+		EVP_cleanup();
+		CRYPTO_cleanup_all_ex_data();
+		ERR_remove_state(0);
+
+		for (i = 0; i < CRYPTO_num_locks(); i++) {
+			pthread_mutex_destroy(&ssl_mutexes[i]);
+		}
+		free(ssl_mutexes);
+		ssl_mutexes = NULL;
+	}
+}
+#endif /* !NO_SSL */
+
+static int
+mg_atomic_inc(volatile int *addr)
+{
+	int ret;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+	/* Depending on the SDK, this function uses either
+	 * (volatile unsigned int *) or (volatile LONG *),
+	 * so whatever you use, the other SDK is likely to raise a warning. */
+	ret = InterlockedIncrement((volatile long *)addr);
+#elif defined(__GNUC__)                                                        \
+    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
+	ret = __sync_add_and_fetch(addr, 1);
+#else
+	ret = (++(*addr));
+#endif
+	return ret;
+}
+
+
+static int
+mg_atomic_dec(volatile int *addr)
+{
+	int ret;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+	/* Depending on the SDK, this function uses either
+	 * (volatile unsigned int *) or (volatile LONG *),
+	 * so whatever you use, the other SDK is likely to raise a warning. */
+	ret = InterlockedDecrement((volatile long *)addr);
+#elif defined(__GNUC__)                                                        \
+    && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 0)))
+	ret = __sync_sub_and_fetch(addr, 1);
+#else
+	ret = (--(*addr));
+#endif
+	return ret;
+}
+
+ static const ssl_param_names_t param_map[] = {
+   {"zookeeper.client.secure",           SSL_SECURE},
+   {"zookeeper.ssl.keyStore.location",   SSL_KEYSTORE_LOC},
+   {"zookeeper.ssl.keyStore.password",   SSL_KEYSTORE_PWD},
+   {"zookeeper.ssl.trustStore.location", SSL_TRUSTSTORE_LOC},
+   {"zookeeper.ssl.trustStore.password", SSL_TRUSTSTORE_PWD},
+   {NULL, 0}
+ };
+
+ 
+static void assign_param(char **opts, const int idx, const char *token) {
+   if (opts[idx]) {
+     free(opts[idx]);
+   }
+   opts[idx] = strdup(token);
+ }
+
+static void check_opt(char **opts, const char *name, const char *val) {
+   int i;
+   for (i = 0; param_map[i].name; i++) {
+     if (0 == strcmp(param_map[i].name, name)) {
+       if (val) {
+	 assign_param(opts, param_map[i].idx, val);
+       }
+       break;
+     }
+   }
+ }
+
+static void parse_buf(char **opts, char *buf) {
+   int i;
+   char *name;
+   char *val;
+   char *saveptr;
+
+   i = strlen(buf);
+   if (buf[i] == '\n') {
+     buf[i] = '\0';
+   }
+
+   name = strtok_r(buf, "=", &saveptr);
+   if (!name) {
+     return;
+   }
+   val = strtok_r(NULL, " \t\n", &saveptr);
+   if (!val) {
+     return;
+   }
+
+   check_opt(opts, name, val);
+ }
+
+static void file_opts(char **opts, const char *filename) {
+   char line[BUFSIZ];
+   FILE *fp = fopen(filename, "r");
+   if (!fp) {
+     fprintf(stderr, "File '%s' failed to open.\n", filename);
+     return;
+   }
+
+   while (fgets(line, BUFSIZ, fp)) {
+     parse_buf(opts, line);
+   }
+  
+   fclose(fp);
+ }
+
+static void env_opts(char **opts, const char *env_name) {
+   char *eval = getenv(env_name);
+   char *p, *q;
+   if (!eval) {
+     return;
+   }
+   eval = strdup(eval);
+   for (p = eval; ((p = strstr(p, "-D"))); p = q + 1) {
+     p += 2;
+     for (q = p; *q && !isspace(*q); ++q) { continue; }
+    
+     if (*q) {
+       *q = '\0';
+     }
+     parse_buf(opts, p);
+   }    
+ }
+
+ 
+static void zookeeper_ssl_opts(zhandle_t *zh)
+ {
+   file_opts(zh->ssl_config, "./testfile");
+   env_opts(zh->ssl_config, "CLIENT_JVMFLAGS");
+ }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 

@@ -30,6 +30,39 @@
 #include "zk_hashtable.h"
 #include "addrvec.h"
 
+
+/* civetweb ssl additions */
+#if defined(NO_SSL)
+typedef struct SSL SSL; /* dummy for SSL argument to push/pull */
+typedef struct SSL_CTX SSL_CTX;
+#else
+#if defined(NO_SSL_DL)
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/crypto.h>
+#include <openssl/x509.h>
+#include <openssl/pem.h>
+#include <openssl/engine.h>
+#include <openssl/conf.h>
+#include <openssl/dh.h>
+#else
+/* SSL loaded dynamically from DLL.
+ * I put the prototypes here to be independent from OpenSSL source
+ * installation. */
+
+typedef struct ssl_st SSL;
+typedef struct ssl_method_st SSL_METHOD;
+typedef struct ssl_ctx_st SSL_CTX;
+typedef struct x509_store_ctx_st X509_STORE_CTX;
+typedef struct x509_name X509_NAME;
+typedef struct asn1_integer ASN1_INTEGER;
+typedef struct evp_md EVP_MD;
+typedef struct x509 X509;
+
+#endif /* NO_SSL_DL */
+#endif /* NO_SSL */
+
+
 /* predefined xid's values recognized as special by the server */
 #define WATCHER_EVENT_XID -1 
 #define PING_XID -2
@@ -181,6 +214,34 @@ typedef struct _auth_list_head {
 #endif
 } auth_list_head_t;
 
+  /* civetweb ssl addition */
+enum {
+        SSL_SECURE,
+	SSL_KEYSTORE_LOC,
+	SSL_KEYSTORE_PWD,
+	SSL_TRUSTSTORE_LOC,
+	SSL_TRUSTSTORE_PWD,
+	SSL_CERTIFICATE,
+	SSL_DO_VERIFY_PEER,
+	SSL_CA_PATH,
+	SSL_CA_FILE,
+	SSL_VERIFY_DEPTH,
+	SSL_DEFAULT_VERIFY_PATHS,
+	SSL_CIPHER_LIST,
+	SSL_PROTOCOL_VERSION,
+	SSL_SHORT_TRUST,
+	SSL_NUM_OPTIONS
+};
+
+  /* Peer certificate information */
+typedef struct _peer_cert {
+  const char *subject;
+  const char *issuer;
+  const char *serial;
+  const char *finger;
+}  peer_cert_t;
+
+  
 /**
  * This structure represents the connection to zookeeper.
  */
@@ -262,6 +323,14 @@ struct _zhandle {
     char allow_read_only;
     /** Indicates if we connected to a majority server before */
     char seen_rw_server_before;
+
+
+  /** civetweb ssl addition */
+    char is_ssl;    /** Is port SSL-ed */
+    SSL_CTX *ssl_ctx; /** SSL context */
+    SSL *ssl;                 /** SSL descriptor */
+    char *ssl_config[SSL_NUM_OPTIONS];     /* Civetweb configuration parameters */
+    peer_cert_t *peer_cert;
 };
 
 
