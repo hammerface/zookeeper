@@ -71,6 +71,21 @@
 
 /* civetweb ssl */
 
+static pthread_key_t sTlsKey; /* Thread local storage index */
+/* static int sTlsInit = 0; */
+static int thread_idx_max = 0;
+
+
+struct mg_workerTLS {
+	int is_master;
+	unsigned long thread_idx;
+#if defined(_WIN32) && !defined(__SYMBIAN32__)
+	HANDLE pthread_cond_helper_mutex;
+	struct mg_workerTLS *next_waiting_thread;
+#endif
+};
+
+
 #define MG_BUF_LEN (8192) /* fix me */ 
 
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -108,10 +123,10 @@ static pthread_mutexattr_t pthread_mutex_attr;
 #define CRYPTO_LIB "libcrypto.dylib"
 #else
 #if !defined(SSL_LIB)
-#define SSL_LIB "libssl.so"
+#define SSL_LIB "libssl.so.1.0.0"
 #endif
 #if !defined(CRYPTO_LIB)
-#define CRYPTO_LIB "libcrypto.so"
+#define CRYPTO_LIB "libcrypto.so.1.0.0"
 #endif
 
 #endif	/* (__MACH__) */
@@ -172,7 +187,7 @@ struct ssl_func {
 #define SSL_set_fd (*(int (*)(SSL *, SOCKET))ssl_sw[6].ptr)
 #define SSL_new (*(SSL * (*)(SSL_CTX *))ssl_sw[7].ptr)
 #define SSL_CTX_new (*(SSL_CTX * (*)(SSL_METHOD *))ssl_sw[8].ptr)
-#define SSLv23_server_method (*(SSL_METHOD * (*)(void))ssl_sw[9].ptr)
+#define TLSv1_2_server_method (*(SSL_METHOD * (*)(void))ssl_sw[9].ptr)
 #define SSL_library_init (*(int (*)(void))ssl_sw[10].ptr)
 #define SSL_CTX_use_PrivateKey_file                                            \
 	(*(int (*)(SSL_CTX *, const char *, int))ssl_sw[11].ptr)
@@ -184,7 +199,7 @@ struct ssl_func {
 #define SSL_load_error_strings (*(void (*)(void))ssl_sw[15].ptr)
 #define SSL_CTX_use_certificate_chain_file                                     \
 	(*(int (*)(SSL_CTX *, const char *))ssl_sw[16].ptr)
-#define SSLv23_client_method (*(SSL_METHOD * (*)(void))ssl_sw[17].ptr)
+#define TLSv1_2_client_method (*(SSL_METHOD * (*)(void))ssl_sw[17].ptr)
 #define SSL_pending (*(int (*)(SSL *))ssl_sw[18].ptr)
 #define SSL_CTX_set_verify                                                     \
 	(*(void (*)(SSL_CTX *,                                                     \
@@ -264,7 +279,7 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_set_fd", NULL},
                                    {"SSL_new", NULL},
                                    {"SSL_CTX_new", NULL},
-                                   {"SSLv23_server_method", NULL},
+                                   {"TLSv1_2_server_method", NULL},
                                    {"SSL_library_init", NULL},
                                    {"SSL_CTX_use_PrivateKey_file", NULL},
                                    {"SSL_CTX_use_certificate_file", NULL},
@@ -272,7 +287,7 @@ static struct ssl_func ssl_sw[] = {{"SSL_free", NULL},
                                    {"SSL_CTX_free", NULL},
                                    {"SSL_load_error_strings", NULL},
                                    {"SSL_CTX_use_certificate_chain_file", NULL},
-                                   {"SSLv23_client_method", NULL},
+                                   {"TLSv1_2_client_method", NULL},
                                    {"SSL_pending", NULL},
                                    {"SSL_CTX_set_verify", NULL},
                                    {"SSL_shutdown", NULL},
@@ -523,6 +538,7 @@ static void zookeeper_ssl_opts(zhandle_t *);
 static int mg_atomic_inc(volatile int *);
 static int mg_atomic_dec(volatile int *);
 static int set_non_blocking_mode(SOCKET);
+static int sslize(zhandle_t *, SOCKET, SSL_CTX *, int (*func)(SSL *));
 
 static sendsize_t zookeeper_send(zhandle_t *zh, socket_t s, const void* buf, size_t len)
 {
@@ -2387,6 +2403,21 @@ static int prime_connection(zhandle_t *zh)
     int len = sizeof(buffer_req);
     int hlen = 0;
     struct connect_req req;
+
+
+    if (zh->is_ssl) {
+      rc = sslize(zh, zh->fd, zh->ssl_ctx, SSL_connect);
+      if (1 != rc) {
+        return handle_socket_error_msg(zh, __LINE__, ZCONNECTIONLOSS,
+				       "sslize failed");
+      }
+      else {
+	/* We had to wait until after SSL 
+	   handshake completes to enable async IO */
+	zookeeper_set_sock_noblock(zh, zh->fd);
+      }
+    }
+	    
     req.protocolVersion = 0;
     req.sessionId = zh->seen_rw_server_before ? zh->client_id.client_id : 0;
     req.passwd_len = sizeof(req.passwd);
@@ -2488,6 +2519,13 @@ static int ping_rw_server(zhandle_t* zh)
     if (rc < 0) {
         return 0;
     }
+    if (zh->is_ssl) {
+      rc = sslize(zh, zh->fd, zh->ssl_ctx, SSL_connect);
+      if (1 != rc) {
+        return handle_socket_error_msg(zh, __LINE__, ZCONNECTIONLOSS,
+				       "sslize failed");
+      }
+    }
 
     ssize = zookeeper_send(zh, sock, "isro", 4);
     if (ssize < 0) {
@@ -2575,7 +2613,6 @@ static socket_t zookeeper_connect(zhandle_t *zh,
     /* civetweb fixme - check for use_ssl && (SSLv23_client_method == NULL */
     LOG_DEBUG(LOGCALLBACK(zh), "[zk] connect()\n");
     rc = connect(fd, (struct sockaddr *)addr, addr_len);
-
 #ifdef _WIN32
     get_errno();
 #if _MSC_VER >= 1600
@@ -2589,7 +2626,13 @@ static socket_t zookeeper_connect(zhandle_t *zh,
     }
 #endif
 #endif
+    LOG_DEBUG(LOGCALLBACK(zh), "[zk] connect(): rc = %d; errno = %d %s\n",
+	      rc, errno, strerror(errno));
 
+    
+    /* if (0 == rc && zh->is_ssl) { */
+    /* 	rc = sslize(zh, fd, zh->ssl_ctx, SSL_connect); */
+    /* } */
     return rc;
 }
 
@@ -2648,10 +2691,14 @@ int zookeeper_interest(zhandle_t *zh, socket_t *fd, int *interest,
                                            "socket() call failed");
               return api_epilog(zh, rc);
             }
-
-            zookeeper_set_sock_nodelay(zh, zh->fd);
-            zookeeper_set_sock_noblock(zh, zh->fd);
-
+	    
+	    zookeeper_set_sock_nodelay(zh, zh->fd);
+	    if (!zh->is_ssl) {
+	      /* if we are doing ssl, we need synchronous IO until 
+		 the handshake completes */
+	      zookeeper_set_sock_noblock(zh, zh->fd);
+	    }
+	    
             rc = zookeeper_connect(zh, &zh->addr_cur, zh->fd);
 
             if (rc == -1) {
@@ -2786,6 +2833,7 @@ static int check_events(zhandle_t *zh, int events)
             return handle_socket_error_msg(zh, __LINE__,ZCONNECTIONLOSS,
                 "server refused to accept the client");
         }
+	LOG_DEBUG(LOGCALLBACK(zh), "[zk] check_events()\n");
 
         if((rc=prime_connection(zh))!=0)
             return rc;
@@ -5300,7 +5348,6 @@ ssl_id_callback(void)
  * operator as an argument. */
 #endif
 
-#if 0 /* fix me */
 	if (sizeof(pthread_t) > sizeof(unsigned long)) {
 		/* This is the problematic case for CRYPTO_set_id_callback:
 		 * The OS pthread_t can not be cast to unsigned long. */
@@ -5324,7 +5371,6 @@ ssl_id_callback(void)
 		memcpy(&ret, &t, sizeof(pthread_t));
 		return ret;
 	}
-#endif	/* 0 */
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
@@ -5410,7 +5456,14 @@ sslize(zhandle_t *zh, SOCKET sock, SSL_CTX *s, int (*func)(SSL *))
 	int short_trust;
 	unsigned i;
 
+	LOG_DEBUG(LOGCALLBACK(zh), "[zk] %s %d\n", __func__, __LINE__);
+	LOG_DEBUG(LOGCALLBACK(zh), "[zk] zh:%p, ssl_ctx:%p\n",
+		  zh, s);
+
+	LOG_DEBUG(LOGCALLBACK(zh), "[zk] func=%p, SSL_connect=%p",
+		  func, SSL_connect);	
 	if (!zh) {
+	  	LOG_DEBUG(LOGCALLBACK(zh), "[zk] %s %d\n", __func__, __LINE__);
 		return 0;
 	}
 
@@ -5421,12 +5474,14 @@ sslize(zhandle_t *zh, SOCKET sock, SSL_CTX *s, int (*func)(SSL *))
 	if (short_trust) {
 		int trust_ret = refresh_trust(zh);
 		if (!trust_ret) {
+		  	LOG_DEBUG(LOGCALLBACK(zh), "[zk] %s %d\n", __func__, __LINE__);
 			return trust_ret;
 		}
 	}
 
 	zh->ssl = SSL_new(s);
 	if (zh->ssl == NULL) {
+	  	LOG_DEBUG(LOGCALLBACK(zh), "[zk] %s %d\n", __func__, __LINE__);
 		return 0;
 	}
 
@@ -5439,6 +5494,7 @@ sslize(zhandle_t *zh, SOCKET sock, SSL_CTX *s, int (*func)(SSL *))
 		/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
 		 * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
 		ERR_remove_state(0);
+		LOG_DEBUG(LOGCALLBACK(zh), "[zk] %s %d\n", __func__, __LINE__);
 		return 0;
 	}
 
@@ -5447,35 +5503,41 @@ sslize(zhandle_t *zh, SOCKET sock, SSL_CTX *s, int (*func)(SSL *))
 	 * Here "func" could be SSL_connect or SSL_accept. */
 	for (i = 0; i <= 16; i *= 2) {
 		ret = func(zh->ssl);
+		LOG_DEBUG(LOGCALLBACK(zh), "[zk] ret = %d", ret);	
 		if (ret != 1) {
 			err = SSL_get_error(zh->ssl, ret);
+			LOG_DEBUG(LOGCALLBACK(zh), "[zk] retry: %d, %s",
+				  i, ssl_error());
 			if ((err == SSL_ERROR_WANT_CONNECT)
 			    || (err == SSL_ERROR_WANT_ACCEPT)) {
 				/* Retry */
 			  /* fix me */
 				//mg_sleep(i);
-
 			} else {
 				/* This is an error */
 				/* TODO: set some error message */
+			  LOG_DEBUG(LOGCALLBACK(zh), "[zk] SSL_err=%d", err);
 				break;
 			}
 
 		} else {
+		  LOG_DEBUG(LOGCALLBACK(zh), "[zk] loop success");
 			/* success */
 			break;
 		}
 	}
-
+	LOG_DEBUG(LOGCALLBACK(zh), "[zk] ret = %d before ret!= 1", ret);	
 	if (ret != 1) {
 		SSL_free(zh->ssl);
 		zh->ssl = NULL;
 		/* Avoid CRYPTO_cleanup_all_ex_data(); See discussion:
 		 * https://wiki.openssl.org/index.php/Talk:Library_Initialization */
 		ERR_remove_state(0);
+		LOG_DEBUG(LOGCALLBACK(zh), "[zk] %s %d\n", __func__, __LINE__);
 		return 0;
 	}
 
+	LOG_DEBUG(LOGCALLBACK(zh), "[zk] %s %d\n", __func__, __LINE__);
 	return 1;
 }
 
@@ -5755,6 +5817,7 @@ ssl_get_protocol(int version_id)
 
 
 /* Dynamically load SSL library. Set up zh->ssl_ctx pointer. */
+/* return 0 on error */
 static int
 set_ssl_option(zhandle_t *zh)
 {
@@ -5770,24 +5833,36 @@ set_ssl_option(zhandle_t *zh)
 	md5_state_t md5state;
 	int protocol_ver;
 
+	LOG_DEBUG(LOGCALLBACK(zh), "[zk] %s zh:%p zh->ssl_ctx:%p\n",
+		  __func__, zh, zh->ssl_ctx);
+
+	
 	/* If PEM file is not specified and the init_ssl callback
 	 * is not specified, skip SSL initialization. */
 	if (!zh) {
 		return 0;
 	}
 	if ((pem = zh->ssl_config[SSL_CERTIFICATE]) == NULL) {
-		return 1;
+	  LOG_ERROR(LOGCALLBACK(zh), "No certificate option set");
+	  return 1;
 	}
 
+	if ((zh->ssl_config[SSL_PROTOCOL_VERSION]) == NULL) {
+	  LOG_ERROR(LOGCALLBACK(zh), "No SSL protocol version set");
+	  return 1;
+	}
+	
 	if (!initialize_ssl(zh)) {
-		return 0;
+	  LOG_ERROR(LOGCALLBACK(zh), "Initialize ssl error");
+	  return 0;
 	}
 
 #if !defined(NO_SSL_DL)
 	if (!ssllib_dll_handle) {
 		ssllib_dll_handle = load_dll(zh, SSL_LIB, ssl_sw);
 		if (!ssllib_dll_handle) {
-			return 0;
+		  LOG_ERROR(LOGCALLBACK(zh), "no ssl dll handle");
+		  return 0;
 		}
 	}
 #endif /* NO_SSL_DL */
@@ -5796,11 +5871,12 @@ set_ssl_option(zhandle_t *zh)
 	SSL_library_init();
 	SSL_load_error_strings();
 
-	if ((zh->ssl_ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) {
-		LOG_ERROR(LOGCALLBACK(zh), "SSL_CTX_new (server) error: %s", ssl_error());
+	if ((zh->ssl_ctx = SSL_CTX_new(TLSv1_2_client_method())) == NULL) {
+		LOG_ERROR(LOGCALLBACK(zh), "SSL_CTX_new (client) error: %s", ssl_error());
 		return 0;
 	}
-
+	LOG_DEBUG(LOGCALLBACK(zh), "[zk] %s zh:%p zh->ssl_ctx:%p\n",
+		  __func__, zh, zh->ssl_ctx);
 	SSL_CTX_clear_options(zh->ssl_ctx,
 	                      SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1
 	                          | SSL_OP_NO_TLSv1_1);
@@ -5948,14 +6024,44 @@ mg_atomic_dec(volatile int *addr)
 }
 
  static const ssl_param_names_t param_map[] = {
-   {"zookeeper.client.secure",           SSL_SECURE},
-   {"zookeeper.ssl.keyStore.location",   SSL_KEYSTORE_LOC},
-   {"zookeeper.ssl.keyStore.password",   SSL_KEYSTORE_PWD},
-   {"zookeeper.ssl.trustStore.location", SSL_TRUSTSTORE_LOC},
-   {"zookeeper.ssl.trustStore.password", SSL_TRUSTSTORE_PWD},
+   {"zookeeper.client.secure",              SSL_SECURE},
+   {"zookeeper.ssl.keyStore.location",      SSL_KEYSTORE_LOC},
+   {"zookeeper.ssl.keyStore.password",      SSL_KEYSTORE_PWD},
+   {"zookeeper.ssl.trustStore.location",    SSL_TRUSTSTORE_LOC},
+   {"zookeeper.ssl.trustStore.password",    SSL_TRUSTSTORE_PWD},
+   {"zookeeper.ssl.c.certificate",          SSL_CERTIFICATE},
+   {"zookeeper.ssl.c.verify_peer",          SSL_DO_VERIFY_PEER},
+   {"zookeeper.ssl.c.ca_path",              SSL_CA_PATH},
+   {"zookeeper.ssl.c.ca_file",              SSL_CA_FILE},
+   {"zookeeper.ssl.c.verify_depth",         SSL_VERIFY_DEPTH},
+   {"zookeeper.ssl.c.default_verify_paths", SSL_DEFAULT_VERIFY_PATHS},
+   {"zookeeper.ssl.c.cipher_list",          SSL_CIPHER_LIST},
+   {"zookeeper.ssl.c.protocol_version",     SSL_PROTOCOL_VERSION},
+   {"zookeeper.ssl.c.short_trust",          SSL_SHORT_TRUST},
    {NULL, 0}
  };
-
+ 
+ static const char *get_ssl_opt_name(int opt_num) {
+   const char *rv;
+   switch (opt_num) { 
+   case SSL_SECURE:               rv="client.secure";        break; 
+   case SSL_KEYSTORE_LOC:         rv="keyStore.location";    break; 
+   case SSL_KEYSTORE_PWD:         rv="keyStore.password";    break; 
+   case SSL_TRUSTSTORE_LOC:       rv="trustStore.location";  break; 
+   case SSL_TRUSTSTORE_PWD:       rv="trustStore.password";  break; 
+   case SSL_CERTIFICATE:          rv="certificate";          break; 
+   case SSL_DO_VERIFY_PEER:       rv="verify_peer";          break; 
+   case SSL_CA_PATH:              rv="ca_path";              break; 
+   case SSL_CA_FILE:              rv="ca_file";              break; 
+   case SSL_VERIFY_DEPTH:         rv="verify_depth";         break; 
+   case SSL_DEFAULT_VERIFY_PATHS: rv="default_verify_paths"; break; 
+   case SSL_CIPHER_LIST:          rv="cipher_list";          break; 
+   case SSL_PROTOCOL_VERSION:     rv="protocol_version";     break; 
+   case SSL_SHORT_TRUST:          rv="short_trust";          break;
+   default:                       rv="BAD_OPTION";           break;
+   }
+   return rv;
+ }
  
 static void assign_param(char **opts, const int idx, const char *token) {
    if (opts[idx]) {
@@ -6032,11 +6138,39 @@ static void env_opts(char **opts, const char *env_name) {
    }    
  }
 
+ static void dump_ssl_opts(zhandle_t *zh)
+ {
+   int i;
+   LOG_DEBUG(LOGCALLBACK(zh), "ssl_options:");
+   for (i = 0; i < SSL_NUM_OPTIONS; ++i) {
+     LOG_DEBUG(LOGCALLBACK(zh), "%s: %s", get_ssl_opt_name(i),
+	       zh->ssl_config[i] ? zh->ssl_config[i] : "nil");
+   }
+ }
  
 static void zookeeper_ssl_opts(zhandle_t *zh)
  {
+   char *env;
+   LOG_DEBUG(LOGCALLBACK(zh), "%s - zh:%p",
+	     __func__, zh);
    file_opts(zh->ssl_config, "./testfile");
    env_opts(zh->ssl_config, "CLIENT_JVMFLAGS");
+   env_opts(zh->ssl_config, "CLIENT_CFLAGS");
+   zoo_set_debug_level(ZOO_LOG_LEVEL_DEBUG);
+   dump_ssl_opts(zh);
+   if (0 == strcmp("true", zh->ssl_config[SSL_SECURE])) {
+     zh->is_ssl = 1;
+   }
+
+   if (zh->is_ssl) {
+     int opt_ret = set_ssl_option(zh);
+     LOG_DEBUG(LOGCALLBACK(zh), "set_ssl_option: %d: %s",
+	       opt_ret, opt_ret ? "Success" : "FAILURE");
+   }
+
+   
+   env = getenv("ZOO_LOG");
+   zoo_set_debug_level(env ? atoi(env) : ZOO_LOG_LEVEL_WARN);
  }
 
 

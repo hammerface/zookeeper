@@ -3,7 +3,7 @@
 
 AC_PREREQ(2.59)
 
-AC_INIT([zookeeper C client],3.5.2,[user@zookeeper.apache.org],[zookeeper])
+AC_INIT([zookeeper C client],3.6.0,[user@zookeeper.apache.org],[zookeeper])
 AC_CONFIG_SRCDIR([src/zookeeper.c])
 
 # Save initial CFLAGS and CXXFLAGS values before AC_PROG_CC and AC_PROG_CXX
@@ -148,6 +148,14 @@ LIBS=""
 AC_CHECK_LIB(rt, clock_gettime)
 CLOCK_GETTIME_LIBS=$LIBS
 AC_SUBST(CLOCK_GETTIME_LIBS)
+LIBS="$saved_LIBS"
+
+# Determine which libraries we need to use dlopen
+saved_LIBS="$LIBS"
+LIBS=""
+AC_CHECK_LIB(dl, dlopen)
+DYNAMIC_LOAD_LIBS=$LIBS
+AC_SUBST(DYNAMIC_LOAD_LIBS)
 LIBS="$saved_LIBS"
 
 # Checks for library functions.

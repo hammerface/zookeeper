@@ -25,6 +25,15 @@
 # relative to the canonical path of this script.
 #
 
+# flags to use ssl on client
+export CLIENT_JVMFLAGS="
+-Dzookeeper.clientCnxnSocket=org.apache.zookeeper.ClientCnxnSocketNetty 
+-Dzookeeper.client.secure=true 
+-Dzookeeper.ssl.keyStore.location=/home/jrbrower/zookeeper/ssl/selfsigned.jks 
+-Dzookeeper.ssl.keyStore.password=password
+-Dzookeeper.ssl.trustStore.location=/home/jrbrower/zookeeper/ssl/selfsigned.jks 
+-Dzookeeper.ssl.trustStore.password=password"
+
 # use POSTIX interface, symlink is followed automatically
 ZOOBIN="${BASH_SOURCE-$0}"
 ZOOBIN="$(dirname "${ZOOBIN}")"

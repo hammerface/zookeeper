@@ -344,7 +344,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
                     initSSL(p);
                 }
                 p.addLast("servercnxnfactory", channelHandler);
-
+		LOG.info("servercnxnfactory added for channel: {}", p.getChannel());
                 return p;
             }
         });
@@ -355,8 +355,10 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         String authProviderProp = System.getProperty(ZKConfig.SSL_AUTHPROVIDER);
         SSLContext sslContext;
         if (authProviderProp == null) {
+	    LOG.info("authProviderProp == null");
             sslContext = X509Util.createSSLContext();
         } else {
+	    LOG.info("authProviderProp != null");
             sslContext = SSLContext.getInstance("TLSv1");
             X509AuthenticationProvider authProvider =
                     (X509AuthenticationProvider)ProviderRegistry.getProvider(
@@ -376,11 +378,16 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
                             null);
         }
 
+	LOG.info("before sslEngine assignment");
         SSLEngine sslEngine = sslContext.createSSLEngine();
         sslEngine.setUseClientMode(false);
+	// can change this and remove client auth requirement
         sslEngine.setNeedClientAuth(true);
 
-        p.addLast("ssl", new SslHandler(sslEngine));
+	LOG.info("before p.addLast, p = {}", p);
+	SslHandler temp = new SslHandler(sslEngine);
+	LOG.info("SslHandler set, temp = {}", temp);
+        p.addLast("ssl", temp);
         LOG.info("SSL handler added for channel: {}", p.getChannel());
     }
 

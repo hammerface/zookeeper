@@ -37,7 +37,7 @@ lib_LTLIBRARIES = libzookeeper_st.la
 libzookeeper_st_la_SOURCES =
 libzookeeper_st_la_LIBADD=libzkst.la libhashtable.la
 libzookeeper_st_la_DEPENDENCIES=libzkst.la libhashtable.la
-libzookeeper_st_la_LDFLAGS = $(LIB_LDFLAGS) -export-symbols-regex $(EXPORT_SYMBOLS)
+libzookeeper_st_la_LDFLAGS = $(LIB_LDFLAGS) -export-symbols-regex $(EXPORT_SYMBOLS) $(DYNAMIC_LOAD_LIBS)
 
 if WANT_SYNCAPI
 noinst_LTLIBRARIES += libzkmt.la
@@ -49,7 +49,7 @@ lib_LTLIBRARIES += libzookeeper_mt.la
 libzookeeper_mt_la_SOURCES =
 libzookeeper_mt_la_LIBADD=libzkmt.la libhashtable.la -lpthread
 libzookeeper_mt_la_DEPENDENCIES=libzkmt.la libhashtable.la
-libzookeeper_mt_la_LDFLAGS = $(LIB_LDFLAGS) -export-symbols-regex $(EXPORT_SYMBOLS)
+libzookeeper_mt_la_LDFLAGS = $(LIB_LDFLAGS) -export-symbols-regex $(EXPORT_SYMBOLS) $(DYNAMIC_LOAD_LIBS)
 endif
 
 bin_PROGRAMS = cli_st
@@ -115,7 +115,7 @@ TESTS_ENVIRONMENT = ZKROOT=${srcdir}/../.. \
 nodist_zktest_st_SOURCES = $(TEST_SOURCES)
 zktest_st_LDADD = libzkst.la libhashtable.la $(CPPUNIT_LIBS)
 zktest_st_CXXFLAGS = -DUSE_STATIC_LIB $(CPPUNIT_CFLAGS) $(USEIPV6) $(SOLARIS_CPPFLAGS)
-zktest_st_LDFLAGS = -static-libtool-libs $(SYMBOL_WRAPPERS) $(SOLARIS_LIB_LDFLAGS)
+zktest_st_LDFLAGS = -shared $(SYMBOL_WRAPPERS) $(SOLARIS_LIB_LDFLAGS)
 
 if WANT_SYNCAPI
   check_PROGRAMS += zktest-mt
@@ -128,7 +128,7 @@ if SOLARIS
 else
   SYMBOL_WRAPPERS_MT=$(SYMBOL_WRAPPERS) $(shell cat ${srcdir}/tests/wrappers-mt.opt)
 endif
-  zktest_mt_LDFLAGS = -static-libtool-libs $(SYMBOL_WRAPPERS_MT) $(SOLARIS_LIB_LDFLAGS)
+  zktest_mt_LDFLAGS = -shared $(SYMBOL_WRAPPERS_MT) $(SOLARIS_LIB_LDFLAGS)
 endif
 
 TESTS = $(check_PROGRAMS)
