@@ -6153,12 +6153,13 @@ static void zookeeper_ssl_opts(zhandle_t *zh)
    char *env;
    LOG_DEBUG(LOGCALLBACK(zh), "%s - zh:%p",
 	     __func__, zh);
-   file_opts(zh->ssl_config, "./testfile");
-   env_opts(zh->ssl_config, "CLIENT_JVMFLAGS");
+   //   file_opts(zh->ssl_config, "./testfile");
+   //   env_opts(zh->ssl_config, "CLIENT_JVMFLAGS");
    env_opts(zh->ssl_config, "CLIENT_CFLAGS");
    zoo_set_debug_level(ZOO_LOG_LEVEL_DEBUG);
    dump_ssl_opts(zh);
-   if (0 == strcmp("true", zh->ssl_config[SSL_SECURE])) {
+   if (zh->ssl_config[SSL_SECURE] != NULL &&
+       0 == strcmp("true", zh->ssl_config[SSL_SECURE])) {
      zh->is_ssl = 1;
    }
 
