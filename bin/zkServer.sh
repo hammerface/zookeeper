@@ -22,14 +22,6 @@
 #
 
 
-# flags to use ssl on server
-export SERVER_JVMFLAGS="
--Dzookeeper.serverCnxnFactory=org.apache.zookeeper.server.NettyServerCnxnFactory
--Dzookeeper.ssl.keyStore.location=/home/jrbrower/zookeeper/ssl/selfsigned.jks 
--Dzookeeper.ssl.keyStore.password=password
--Dzookeeper.ssl.trustStore.location=/home/jrbrower/zookeeper/ssl/selfsigned.jks 
--Dzookeeper.ssl.trustStore.password=password" 
-
 # use POSTIX interface, symlink is followed automatically
 ZOOBIN="${BASH_SOURCE-$0}"
 ZOOBIN="$(dirname "${ZOOBIN}")"
@@ -154,16 +146,10 @@ start)
          exit 1
       fi
     fi
-    
-#    nohup "$JAVA" $ZOO_DATADIR_AUTOCREATE "-Dzookeeper.log.dir=${ZOO_LOG_DIR}" \
-#    "-Dzookeeper.log.file=${ZOO_LOG_FILE}" "-Dzookeeper.root.logger=${ZOO_LOG4J_PROP}" \
-#    -XX:+HeapDumpOnOutOfMemoryError -XX:OnOutOfMemoryError='kill -9 %p' \
-#    -cp "$CLASSPATH" $JVMFLAGS $ZOOMAIN "$ZOOCFG" > "$_ZOO_DAEMON_OUT" 2>&1 < /dev/null &
-
-    nohup "$JAVA" $ZOO_DATADIR_AUTOCREATE \
-	  "-Dlog4j.configuration=file:$ZOOCFGDIR/log4j.properties" \
-	  -XX:+HeapDumpOnOutOfMemoryError -XX:OnOutOfMemoryError='kill -9 %p' \
-	  -cp "$CLASSPATH" $JVMFLAGS $ZOOMAIN "$ZOOCFG" > "$_ZOO_DAEMON_OUT" 2>&1 < /dev/null &
+    nohup "$JAVA" $ZOO_DATADIR_AUTOCREATE "-Dzookeeper.log.dir=${ZOO_LOG_DIR}" \
+    "-Dzookeeper.log.file=${ZOO_LOG_FILE}" "-Dzookeeper.root.logger=${ZOO_LOG4J_PROP}" \
+    -XX:+HeapDumpOnOutOfMemoryError -XX:OnOutOfMemoryError='kill -9 %p' \
+    -cp "$CLASSPATH" $JVMFLAGS $ZOOMAIN "$ZOOCFG" > "$_ZOO_DAEMON_OUT" 2>&1 < /dev/null &
     if [ $? -eq 0 ]
     then
       if /bin/echo -n $! > "$ZOOPIDFILE"

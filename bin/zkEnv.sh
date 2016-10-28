@@ -25,10 +25,8 @@
 # Or you can specify the ZOOCFGDIR using the
 # '--config' option in the command line.
 
-#ZOOBINDIR="${ZOOBINDIR:-/usr/bin}"
-ZOOBINDIR="${ZOOBINDIR:-$HOME/zookeeper/zookeeper/bin}"
+ZOOBINDIR="${ZOOBINDIR:-/usr/bin}"
 ZOOKEEPER_PREFIX="${ZOOBINDIR}/.."
-ZOOCFGDIR="$ZOOBINDIR/../conf"
 
 #check to see if the conf dir is given as an optional argument
 if [ $# -gt 1 ]
@@ -44,11 +42,9 @@ fi
 
 if [ "x$ZOOCFGDIR" = "x" ]
 then
-    if [ -e "${ZOOKEEPER_PREFIX}/conf" ]; then
-	echo "adding conf"
-	ZOOCFGDIR="$ZOOBINDIR/../conf"
-    else
-	echo "adding etc"
+  if [ -e "${ZOOKEEPER_PREFIX}/conf" ]; then
+    ZOOCFGDIR="$ZOOBINDIR/../conf"
+  else
     ZOOCFGDIR="$ZOOBINDIR/../etc/zookeeper"
   fi
 fi
@@ -69,7 +65,6 @@ then
     . "$ZOOCFGDIR/java.env"
 fi
 
-
 if [ "x${ZOO_LOG_DIR}" = "x" ]
 then
     ZOO_LOG_DIR="$ZOOKEEPER_PREFIX/logs"
@@ -77,7 +72,7 @@ fi
 
 if [ "x${ZOO_LOG4J_PROP}" = "x" ]
 then
-    ZOO_LOG4J_PROP="DEBUG, FILE"
+    ZOO_LOG4J_PROP="INFO,CONSOLE"
 fi
 
 if [[ -n "$JAVA_HOME" ]] && [[ -x "$JAVA_HOME/bin/java" ]];  then
@@ -90,17 +85,13 @@ else
 fi
 
 #add the zoocfg dir to classpath
-#maybe bad
-CLASSPATH=""
 CLASSPATH="$ZOOCFGDIR:$CLASSPATH"
-echo "$ZOOCFGDIR"
-echo "$CLASSPATH"
 
 for i in "$ZOOBINDIR"/../src/java/lib/*.jar
 do
     CLASSPATH="$i:$CLASSPATH"
 done
-echo $CLASSPATH | sed 's;/;\n;g' | grep conf
+
 #make it work in the binary package
 #(use array for LIBPATH to account for spaces within wildcard expansion)
 if ls "${ZOOKEEPER_PREFIX}"/share/zookeeper/zookeeper-*.jar > /dev/null 2>&1; then 
@@ -113,25 +104,21 @@ else
   done
   LIBPATH=("${ZOOBINDIR}"/../lib/*.jar)
 fi
-echo "AFTER JARS"
-echo $CLASSPATH | sed 's;/;\n;g' | grep conf
+
 for i in "${LIBPATH[@]}"
 do
     CLASSPATH="$i:$CLASSPATH"
-
 done
-echo "AFTER LIBS"
-echo $CLASSPATH | sed 's;/;\n;g' | grep conf
+
 #make it work for developers
 for d in "$ZOOBINDIR"/../build/lib/*.jar
 do
    CLASSPATH="$d:$CLASSPATH"
 done
-echo "AFTER MORE JARS"
-echo $CLASSPATH | sed 's;/;\n;g' | grep conf
+
 #make it work for developers
 CLASSPATH="$ZOOBINDIR/../build/classes:$CLASSPATH"
-#CLASSPATH="$CLASSPATH:/home/jrbrower/zookeeper/zookeeper/build/lib/"
+
 case "`uname`" in
     CYGWIN*) cygwin=true ;;
     *) cygwin=false ;;

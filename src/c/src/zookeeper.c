@@ -1661,6 +1661,8 @@ zhandle_t *zookeeper_init2(const char *host, watcher_fn watcher,
  */
 int zoo_set_servers(zhandle_t *zh, const char *hosts)
 {
+    LOG_DEBUG(LOGCALLBACK(zh), "%s - %s",
+	      __func__, "in zoo_set_servers");
     if (hosts == NULL)
     {
         LOG_ERROR(LOGCALLBACK(zh), "New server list cannot be empty");
@@ -6147,14 +6149,13 @@ static void env_opts(char **opts, const char *env_name) {
 	       zh->ssl_config[i] ? zh->ssl_config[i] : "nil");
    }
  }
- 
+
+ /* add a optional read of file opts */
 static void zookeeper_ssl_opts(zhandle_t *zh)
  {
-   char *env;
    LOG_DEBUG(LOGCALLBACK(zh), "%s - zh:%p",
 	     __func__, zh);
    //   file_opts(zh->ssl_config, "./testfile");
-   //   env_opts(zh->ssl_config, "CLIENT_JVMFLAGS");
    env_opts(zh->ssl_config, "CLIENT_CFLAGS");
    zoo_set_debug_level(ZOO_LOG_LEVEL_DEBUG);
    dump_ssl_opts(zh);
@@ -6168,40 +6169,4 @@ static void zookeeper_ssl_opts(zhandle_t *zh)
      LOG_DEBUG(LOGCALLBACK(zh), "set_ssl_option: %d: %s",
 	       opt_ret, opt_ret ? "Success" : "FAILURE");
    }
-
-   
-   env = getenv("ZOO_LOG");
-   zoo_set_debug_level(env ? atoi(env) : ZOO_LOG_LEVEL_WARN);
  }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
