@@ -180,6 +180,8 @@ public:
     void setServersAndVerifyReconfig(const string new_hosts, bool is_reconfig)
     {
         setServers(new_hosts);
+	cout << endl << "new_hosts: " << new_hosts << "; is_reconfig val: "
+	     << is_reconfig << " isReconfig(): " << isReconfig() << endl;
         CPPUNIT_ASSERT_EQUAL(is_reconfig, isReconfig());
     }
 
@@ -416,22 +418,42 @@ public:
     void testMigrateOrNot()
     {
         const string initial_hosts = createHostList(4); // 2004..2001
-
+	int i = 1;
         Client &client = createClient(initial_hosts, "10.10.10.3");
 
+	cout << endl;
+	cout << "server: " << client.getServer() << "; "
+	     << "reconfig: " << client.isReconfig() << endl;
+	cout << "starting tests at 1" << endl; 
+	
         // Ensemble size decreasing, my server is in the new list
         client.setServersAndVerifyReconfig(createHostList(3), false);
-
+	cout << "testMigrateOrNot: " << "after setServersAndVerifyReconfig "
+	     << i++ << endl;
+	
         // Ensemble size decreasing, my server is NOT in the new list
         client.setServersAndVerifyReconfig(createHostList(2), true);
+	cout << "testMigrateOrNot: " << "after setServersAndVerifyReconfig "
+	     << i++ << endl;
 
         // Ensemble size stayed the same, my server is NOT in the new list
         client.setServersAndVerifyReconfig(createHostList(2), true);
+	cout << "testMigrateOrNot: " << "after setServersAndVerifyReconfig "
+	     << i++ << endl;
 
         // Ensemble size increased, my server is not in the new ensemble
         client.setServers(createHostList(4));
         client.cycleUntilServer("10.10.10.1");
+	
+	cout << endl;
+	cout << "server: " << client.getServer() << "; "
+	     << "reconfig: " << client.isReconfig() << endl;
+	cout << "starting tests at 4" << endl; 
         client.setServersAndVerifyReconfig(createHostList(7,2), true);
+	cout << "testMigrateOrNot: " << "after setServersAndVerifyReconfig "
+	     << i++ << endl;
+
+	cout << "testMigrateOrNot: done" << endl;
     }
 
     /**
@@ -465,11 +487,13 @@ public:
         // Since we're in reconfig mode, next connect should be from new list
         // We should try all the new servers *BEFORE* trying any old servers
         string seen;
+	cout << endl;
         for (int i = 0; i < num_coming; i++) {
             string next = client.cycleNextServer();
 
             // Assert next server is in the 'new' list
             size_t found = newComing.find(next);
+	    cout << "next server is " << next << endl;
             CPPUNIT_ASSERT_MESSAGE(next + " not in newComing list",
                                    found != string::npos);
 

@@ -1290,14 +1290,18 @@ int update_addrs(zhandle_t *zh)
     int found_current = 0;
     addrvec_t resolved = { 0 };
 
+    fprintf(stdout, "\nupdate_addrs entry hosts: %s\n", zh->hostname);
+    
     // Verify we have a valid handle
     if (zh == NULL) {
+      fprintf(stdout, "%s %d return\n", __func__, __LINE__);
         return ZBADARGUMENTS;
     }
 
     // zh->hostname should always be set
     if (zh->hostname == NULL)
     {
+      fprintf(stdout, "%s %d return\n", __func__, __LINE__);
         return ZSYSTEMERROR;
     }
 
@@ -1307,6 +1311,7 @@ int update_addrs(zhandle_t *zh)
     // Copy zh->hostname for local use
     hosts = strdup(zh->hostname);
     if (hosts == NULL) {
+      fprintf(stdout, "%s %d return\n", __func__, __LINE__);
         rc = ZSYSTEMERROR;
         goto fail;
     }
@@ -1314,19 +1319,26 @@ int update_addrs(zhandle_t *zh)
     rc = resolve_hosts(zh, hosts, &resolved);
     if (rc != ZOK)
     {
+      fprintf(stdout, "%s %d return\n", __func__, __LINE__);
         goto fail;
     }
 
     // If the addrvec list is identical to last time we ran don't do anything
     if (addrvec_eq(&zh->addrs, &resolved))
     {
+      fprintf(stdout, "%s %d return\n", __func__, __LINE__);
         goto fail;
     }
 
     // Is the server we're connected to in the new resolved list?
     found_current = addrvec_contains(&resolved, &zh->addr_cur);
+    fprintf(stdout, "\n%s %d found_current = %d\n", __func__, __LINE__,
+	    found_current);
+    
+
 
     // Clear out old and new address lists
+    fprintf(stdout, "\n%s %d set to 1\n", __func__, __LINE__);
     zh->reconfig = 1;
     addrvec_free(&zh->addrs_old);
     addrvec_free(&zh->addrs_new);
@@ -1340,6 +1352,7 @@ int update_addrs(zhandle_t *zh)
             rc = addrvec_append(&zh->addrs_old, resolved_address);
             if (rc != ZOK)
             {
+	      fprintf(stdout, "%s %d return\n", __func__, __LINE__);
                 goto fail;
             }
         }
@@ -1347,6 +1360,7 @@ int update_addrs(zhandle_t *zh)
             rc = addrvec_append(&zh->addrs_new, resolved_address);
             if (rc != ZOK)
             {
+	      fprintf(stdout, "%s %d return\n", __func__, __LINE__);
                 goto fail;
             }
         }
@@ -1357,18 +1371,28 @@ int update_addrs(zhandle_t *zh)
 
     // Number of servers increased
     if (num_old + num_new > zh->addrs.count)
-    {
+      {
+	fprintf(stdout, "%s %d Number of servers increased\n", __func__, __LINE__);
         if (found_current) {
             // my server is in the new config, but load should be decreased.
             // Need to decide if the client is moving to one of the new servers
-            if (drand48() <= (1 - ((double)zh->addrs.count) / (num_old + num_new))) {
+	  double drandom = drand48();
+	  double daddrs = (1 - ((double)zh->addrs.count) / (num_old + num_new));
+            if (drandom  <= daddrs) {
+	      fprintf(stdout, "%s %d drandom: %f <= daddrs: %f\n", __func__, __LINE__,
+		      drandom, daddrs);
                 zh->pNew = 1;
                 zh->pOld = 0;
             } else {
                 // do nothing special -- stay with the current server
+	      fprintf(stdout, "%s %d drandom: %f > daddrs: %f\n", __func__, __LINE__,
+		      drandom, daddrs);
+
+	      fprintf(stdout, "%s %d set to 0\n", __func__, __LINE__);
                 zh->reconfig = 0;
             }
         } else {
+	  fprintf(stdout, "%s %d Number of servers increase and not found_current\n", __func__, __LINE__);
             // my server is not in the new config, and load on old servers must
             // be decreased, so connect to one of the new servers
             zh->pNew = 1;
@@ -1378,13 +1402,17 @@ int update_addrs(zhandle_t *zh)
 
     // Number of servers stayed the same or decreased
     else {
+      fprintf(stdout, "%s %d Number of servers did not increase\n", __func__, __LINE__);
         if (found_current) {
             // my server is in the new config, and load should be increased, so
             // stay with this server and do nothing special
+	  fprintf(stdout, "%s %d set to 0\n", __func__, __LINE__);
             zh->reconfig = 0;
         } else {
+      fprintf(stdout, "%s %d Number of servers did not increase and not found_current\n", __func__, __LINE__);	  
             zh->pOld = ((double) (num_old * (zh->addrs.count - (num_old + num_new)))) / ((num_old + num_new) * (zh->addrs.count - num_old));
             zh->pNew = 1 - zh->pOld;
+	    fprintf(stdout, "%s %d pOld: %.f\n", __func__, __LINE__, zh->pOld);
         }
     }
 
@@ -1396,13 +1424,14 @@ int update_addrs(zhandle_t *zh)
     // new connection
     if (zh->reconfig == 1 && zh->fd != -1)
     {
+      fprintf(stdout, "%s %d Closing socket\n", __func__, __LINE__);	  
       zookeeper_close_sock(zh, zh->fd);
         zh->fd = -1;
         zh->state = ZOO_NOTCONNECTED_STATE;
     }
 
 fail:
-
+    fprintf(stdout, "%s %d reached fail\n", __func__, __LINE__);
     unlock_reconfig(zh);
 
     // If we short-circuited out and never assigned resolved to zh->addrs then we
@@ -1416,7 +1445,8 @@ fail:
         free(hosts);
         hosts = NULL;
     }
-
+    fprintf(stdout, "%s %d zh->reconfig = %d\n", __func__, __LINE__, zh->reconfig);
+    fprintf(stdout, "%s %d rc = %d\n", __func__, __LINE__, rc);
     return rc;
 }
 
@@ -1674,6 +1704,7 @@ int zoo_set_servers(zhandle_t *zh, const char *hosts)
 
     // Reset hostname to new set of hosts to connect to
     if (zh->hostname) {
+	fprintf(stdout, "\nold_hosts: %s\n", zh->hostname);
         free(zh->hostname);
     }
 
@@ -1703,7 +1734,8 @@ int zoo_set_servers(zhandle_t *zh, const char *hosts)
 static int get_next_server_in_reconfig(zhandle_t *zh)
 {
     int take_new = drand48() <= zh->pNew;
-
+    fprintf(stdout, "%s %d take_new = %d\n", __func__, __LINE__, take_new);
+    
     LOG_DEBUG(LOGCALLBACK(zh), "[OLD] count=%d capacity=%d next=%d hasnext=%d",
                zh->addrs_old.count, zh->addrs_old.capacity, zh->addrs_old.next,
                addrvec_hasnext(&zh->addrs_old));
@@ -1719,6 +1751,7 @@ static int get_next_server_in_reconfig(zhandle_t *zh)
     {
         addrvec_next(&zh->addrs_new, &zh->addr_cur);
         LOG_DEBUG(LOGCALLBACK(zh), "Using next from NEW=%s", format_endpoint_info(&zh->addr_cur));
+	fprintf(stdout, "%s %d taking a new server\n", __func__, __LINE__);
         return 0;
     }
 
@@ -1726,11 +1759,13 @@ static int get_next_server_in_reconfig(zhandle_t *zh)
     if (addrvec_hasnext(&zh->addrs_old)) {
         addrvec_next(&zh->addrs_old, &zh->addr_cur);
         LOG_DEBUG(LOGCALLBACK(zh), "Using next from OLD=%s", format_endpoint_info(&zh->addr_cur));
+	fprintf(stdout, "%s %d taking an old server\n", __func__, __LINE__);
         return 0;
     }
 
     LOG_DEBUG(LOGCALLBACK(zh), "Failed to find either new or old");
     memset(&zh->addr_cur, 0, sizeof(zh->addr_cur));
+    fprintf(stdout, "%s %d Couldnt find old  or new\n", __func__, __LINE__);
     return 1;
 }
 
@@ -1759,6 +1794,7 @@ void zoo_cycle_next_server(zhandle_t *zh)
         }
 
         // tried all new and old servers and couldn't connect
+	fprintf(stdout, "%s %d set to 0\n", __func__, __LINE__);
         zh->reconfig = 0;
     }
 
@@ -2887,6 +2923,7 @@ static int check_events(zhandle_t *zh, int events)
                            sizeof(zh->client_id.passwd));
                     zh->state = zh->primer_storage.readOnly ?
                       ZOO_READONLY_STATE : ZOO_CONNECTED_STATE;
+		    fprintf(stdout, "%s %d set to 0\n", __func__, __LINE__);
                     zh->reconfig = 0;
                     LOG_INFO(LOGCALLBACK(zh),
                              "session establishment complete on server [%s], sessionId=%#llx, negotiated timeout=%d %s",
