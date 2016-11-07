@@ -156,4 +156,12 @@ public abstract class QuorumZooKeeperServer extends ZooKeeperServer {
         pwriter.println("membership: ");
         pwriter.print(new String(self.getQuorumVerifier().toString().getBytes()));
     }
+<<<<<<< HEAD
+=======
+
+    @Override
+    protected void setState(State state) {
+        this.state = state;
+    }
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 }

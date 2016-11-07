@@ -1,5 +1,10 @@
 Unreleased
 
+NEW FEATURES:
+
+  ZOOKEEPER-1962: Add a CLI command to recursively list a znode and
+  children (Gautam Gopalakrishnan, Hongchao Deng, Enis Soztutar via phunt)
+
 BUGFIXES:
 
   ZOOKEEPER-1898: ZooKeeper Java cli shell always returns "0" as exit code
@@ -17,8 +22,77 @@ BUGFIXES:
   ZOOKEEPER-2500: Fix compilation warnings for CliException classes
   (Abraham Fine via phunt)
 
+  ZOOKEEPER-2074: Incorrect exit codes for "./zkCli.sh cmd arg"
+  (Abraham Fine via phunt)
+
+  Fix command handling in the C client shell (phunt via fpj)
+
+  ZOOKEEPER-2247: Zookeeper service becomes unavailable when leader
+  fails to write transaction log (Rakesh via fpj)
+  
+  ZOOKEEPER-2508: Many ZooKeeper tests are flaky because they proceed
+  with zk operation without connecting to ZooKeeper server.
+  (Arshad Mohammad via phunt)
+
+  ZOOKEEPER-2152: Intermittent failure in TestReconfig.cc
+  (Michael Han via phunt)
+
+  ZOOKEEPER-2548: zooInspector does not start on Windows
+  (Arshad Mohammad via phunt)
+
+  ZOOKEEPER-2558: Potential memory leak in recordio.c
+  (Michael Han via phunt)
+
+  ZOOKEEPER-1927: zkServer.sh fails to read dataDir (and others)
+  from zoo.cfg on Solaris 10 (grep issue, manifests as FAILED TO WRITE PID)
+  (Chris Nauroth via rgs)
+
+  ZOOKEEPER-2536: When provide path for 'dataDir' with trailing space,
+  it is taking correct path (by trucating space) for snapshot but
+  creating temporary file with some junk folder name for
+  zookeeper_server.pid (Rakesh Kumar Singh via phunt)
+
+  ZOOKEEPER-2539: Throwing nullpointerException when run the command
+  "config -c" when client port is mentioned as separate and not like
+  new style (Rakesh Kumar Singh via phunt)
+
+  ZOOKEEPER-2172: Cluster crashes when reconfig a new node as a participant
+  (Arshad Mohammad via phunt)
+
+  ZOOKEEPER-2484: Flaky Test: org.apache.zookeeper.test.LoadFromLogTest.testLoadFailure
+  (Michael Han via phunt)
+
+  ZOOKEEPER-2579: ZooKeeper server should verify that dataDir and
+  snapDir are writeable before starting (Abraham Fine via phunt)
+
+  ZOOKEEPER-2611: zoo_remove_watchers - can remove the wrong watch
+  (Eyal Leshmem via rgs)
+
+  ZOOKEEPER-2467: NullPointerException when redo Command is passed negative value
+  (Rakesh Kumar Singh via rakeshr)
+
+  ZOOKEEPER-2606: SaslServerCallbackHandler#handleAuthorizeCallback() should log
+  the exception (Ted Yu via fpj)
+
+  ZOOKEEPER-2442: Socket leak in QuorumCnxManager connectOne
+  (Michael Han via rakeshr)
+
 IMPROVEMENTS:
 
+  ZOOKEEPER-2505: Use shared library instead of static library in C
+  client unit test (Michael Han via phunt)
+
+  ZOOKEEPER-2489: Upgrade Jetty dependency to a recent stable release
+  version. (Edward Ribeiro via phunt)
+
+  ZOOKEEPER-2507: C unit test improvement: line break between
+  'ZooKeeper server started' and 'Running' (Michael Han via phunt)
+
+  ZOOKEEPER-2557: Update gitignore to account for other file extensions.
+  (Edward Ribeiro via cnauroth)
+
+  ZOOKEEPER-2594: Use TLS for downloading artifacts during build
+  (Olaf Flebbe via phunt)
 
 Release 3.5.2 - 06/29/2016
 

@@ -32,8 +32,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.PortAssignment;
+<<<<<<< HEAD
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
@@ -49,7 +52,11 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+<<<<<<< HEAD
 public class PurgeTxnTest extends ZKTestCase implements  Watcher {
+=======
+public class PurgeTxnTest extends ZKTestCase {
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
     private static final Logger LOG = LoggerFactory.getLogger(PurgeTxnTest.class);
     private static String HOSTPORT = "127.0.0.1:" + PortAssignment.unique();
     private static final int CONNECTION_TIMEOUT = 3000;
@@ -78,7 +85,11 @@ public class PurgeTxnTest extends ZKTestCase implements  Watcher {
         f.startup(zks);
         Assert.assertTrue("waiting for server being up ",
                 ClientBase.waitForServerUp(HOSTPORT,CONNECTION_TIMEOUT));
+<<<<<<< HEAD
         ZooKeeper zk = new ZooKeeper(HOSTPORT, CONNECTION_TIMEOUT, this);
+=======
+        ZooKeeper zk = ClientBase.createZKClient(HOSTPORT);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         try {
             for (int i = 0; i< 2000; i++) {
                 zk.create("/invalidsnap-" + i, new byte[0], Ids.OPEN_ACL_UNSAFE,
@@ -125,7 +136,11 @@ public class PurgeTxnTest extends ZKTestCase implements  Watcher {
         f.startup(zks);
         Assert.assertTrue("waiting for server being up ",
                 ClientBase.waitForServerUp(HOSTPORT, CONNECTION_TIMEOUT));
+<<<<<<< HEAD
         final ZooKeeper zk = new ZooKeeper(HOSTPORT, CONNECTION_TIMEOUT, this);
+=======
+        final ZooKeeper zk = ClientBase.createZKClient(HOSTPORT);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         final CountDownLatch doPurge = new CountDownLatch(1);
         final CountDownLatch purgeFinished = new CountDownLatch(1);
         final AtomicBoolean opFailed = new AtomicBoolean(false);
@@ -452,9 +467,12 @@ public class PurgeTxnTest extends ZKTestCase implements  Watcher {
         }
         return znodes;
     }
+<<<<<<< HEAD
 
     public void process(WatchedEvent event) {
         // do nothing
     }
 
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 }

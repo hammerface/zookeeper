@@ -29,12 +29,16 @@ import java.io.RandomAccessFile;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+<<<<<<< HEAD
 import java.util.concurrent.CountDownLatch;
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 import java.util.zip.Adler32;
 import java.util.zip.CheckedInputStream;
 
 import org.apache.jute.BinaryInputArchive;
 import org.apache.jute.InputArchive;
+<<<<<<< HEAD
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.CreateMode;
@@ -45,20 +49,37 @@ import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs.Ids;
+=======
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.PortAssignment;
+import org.apache.zookeeper.ZKTestCase;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooKeeper;
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 import org.apache.zookeeper.server.persistence.FileSnap;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
 import org.apache.zookeeper.server.persistence.TxnLog.TxnIterator;
 import org.apache.zookeeper.test.ClientBase;
 import org.junit.Assert;
 import org.junit.Test;
+<<<<<<< HEAD
 
 public class CRCTest extends ZKTestCase implements Watcher {
+=======
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class CRCTest extends ZKTestCase{
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
     private static final Logger LOG = LoggerFactory.getLogger(CRCTest.class);
 
     private static final String HOSTPORT =
         "127.0.0.1:" + PortAssignment.unique();
+<<<<<<< HEAD
     private volatile CountDownLatch startSignal;
 
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
     /**
      * corrupt a file by writing m at 500 b
      * offset
@@ -121,7 +142,11 @@ public class CRCTest extends ZKTestCase implements Watcher {
         LOG.info("starting up the zookeeper server .. waiting");
         Assert.assertTrue("waiting for server being up",
                 ClientBase.waitForServerUp(HOSTPORT,CONNECTION_TIMEOUT));
+<<<<<<< HEAD
         ZooKeeper zk = new ZooKeeper(HOSTPORT, CONNECTION_TIMEOUT, this);
+=======
+        ZooKeeper zk = ClientBase.createZKClient(HOSTPORT);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         try {
             for (int i =0; i < 2000; i++) {
                 zk.create("/crctest- " + i , ("/crctest- " + i).getBytes(),
@@ -178,6 +203,7 @@ public class CRCTest extends ZKTestCase implements Watcher {
         }
         Assert.assertTrue(cfile);
    }
+<<<<<<< HEAD
 
     public void process(WatchedEvent event) {
         LOG.info("Event:" + event.getState() + " " + event.getType() + " " + event.getPath());
@@ -187,4 +213,6 @@ public class CRCTest extends ZKTestCase implements Watcher {
             startSignal.countDown();
         }
     }
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 }

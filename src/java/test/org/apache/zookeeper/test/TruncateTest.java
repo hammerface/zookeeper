@@ -27,8 +27,11 @@ import org.apache.jute.Record;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.PortAssignment;
+<<<<<<< HEAD
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
@@ -69,6 +72,7 @@ public class TruncateTest extends ZKTestCase {
         ClientBase.recursiveDelete(dataDir3);
     }
     
+<<<<<<< HEAD
     volatile boolean connected;
     Watcher nullWatcher = new Watcher() {
         @Override
@@ -77,6 +81,8 @@ public class TruncateTest extends ZKTestCase {
         }
     };
 
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
     @Test
     public void testTruncationStreamReset() throws Exception {
         File tmpdir = ClientBase.createTmpDir();
@@ -152,7 +158,11 @@ public class TruncateTest extends ZKTestCase {
     }
 
     @Test
+<<<<<<< HEAD
     public void testTruncate() throws IOException, InterruptedException, KeeperException {
+=======
+    public void testTruncate() throws Exception {
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         // Prime the server that is going to come in late with 50 txns
         String hostPort = "127.0.0.1:" + PortAssignment.unique();
         int maxCnxns = 100;
@@ -169,7 +179,11 @@ public class TruncateTest extends ZKTestCase {
         factory = ClientBase.createNewServerInstance(null, hostPort, maxCnxns);
         ClientBase.startServerInstance(dataDir1, factory, hostPort);
 
+<<<<<<< HEAD
         ZooKeeper zk = new ZooKeeper(hostPort, 15000, nullWatcher);
+=======
+        ZooKeeper zk = ClientBase.createZKClient(hostPort, 15000);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         for(int i = 0; i < 50; i++) {
             zk.create("/" + i, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
@@ -214,17 +228,26 @@ public class TruncateTest extends ZKTestCase {
         s2.start();
         QuorumPeer s3 = new QuorumPeer(peers, dataDir3, dataDir3, port3, 0, 3, tickTime, initLimit, syncLimit);
         s3.start();
+<<<<<<< HEAD
         connected = false;
         zk = new ZooKeeper("127.0.0.1:" + port2, 15000, nullWatcher);
         while(!connected) {
             Thread.sleep(1000);
         }
+=======
+        zk = ClientBase.createZKClient("127.0.0.1:" + port2, 15000);
+
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         for(int i = 0; i < 10; i++) {
             zk.create("/" + i, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
         zk.close();
+<<<<<<< HEAD
         
         final ZooKeeper zk2 = new ZooKeeper("127.0.0.1:" + port2, 15000, nullWatcher);
+=======
+        final ZooKeeper zk2 = ClientBase.createZKClient("127.0.0.1:" + port2, 15000);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         zk2.getData("/9", false, new Stat());
         try {
             zk2.getData("/10", false, new Stat());
@@ -234,12 +257,16 @@ public class TruncateTest extends ZKTestCase {
         }
         QuorumPeer s1 = new QuorumPeer(peers, dataDir1, dataDir1, port1, 0, 1, tickTime, initLimit, syncLimit);
         s1.start();
+<<<<<<< HEAD
 
         connected = false;
         ZooKeeper zk1 = new ZooKeeper("127.0.0.1:" + port1, 15000, nullWatcher);
         while(!connected) {
             Thread.sleep(1000);
         }
+=======
+        ZooKeeper zk1 = ClientBase.createZKClient("127.0.0.1:" + port1, 15000);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         zk1.getData("/9", false, new Stat());
         try {
             // /10 wont work because the session expiration

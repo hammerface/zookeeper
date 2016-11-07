@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
 import org.apache.jute.Record;
+<<<<<<< HEAD
 import org.apache.zookeeper.ZooDefs.OpCode;
 import org.apache.zookeeper.server.ObserverBean;
 import org.apache.zookeeper.server.Request;
@@ -30,6 +31,10 @@ import org.apache.zookeeper.server.quorum.QuorumPeer.LearnerType;
 import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
 import org.apache.zookeeper.server.quorum.QuorumPeer.ServerState;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
+=======
+import org.apache.zookeeper.server.ObserverBean;
+import org.apache.zookeeper.server.Request;
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 import org.apache.zookeeper.server.quorum.flexible.QuorumVerifier;
 import org.apache.zookeeper.server.util.SerializeUtils;
 import org.apache.zookeeper.txn.SetDataTxn;
@@ -78,7 +83,11 @@ public class Observer extends Learner{
  
                 syncWithLeader(newLeaderZxid);
                 QuorumPacket qp = new QuorumPacket();
+<<<<<<< HEAD
                 while (self.isRunning()) {
+=======
+                while (this.isRunning()) {
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
                     readPacket(qp);
                     processPacket(qp);
                 }

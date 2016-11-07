@@ -21,12 +21,17 @@ package org.apache.zookeeper.test;
 import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
 
 import java.io.File;
+<<<<<<< HEAD
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
+=======
+
+import org.apache.zookeeper.PortAssignment;
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.server.LogFormatter;
@@ -39,14 +44,21 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+<<<<<<< HEAD
 public class InvalidSnapshotTest extends ZKTestCase implements Watcher {
+=======
+public class InvalidSnapshotTest extends ZKTestCase{
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
     private final static Logger LOG = LoggerFactory.getLogger(InvalidSnapshotTest.class);
     private static final String HOSTPORT =
             "127.0.0.1:" + PortAssignment.unique();
 
     private static final File testData = new File(
             System.getProperty("test.data.dir", "build/test/data"));
+<<<<<<< HEAD
     private CountDownLatch startSignal;
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 
     /**
      * Verify the LogFormatter by running it on a known file.
@@ -96,7 +108,11 @@ public class InvalidSnapshotTest extends ZKTestCase implements Watcher {
         LOG.info("starting up the zookeeper server .. waiting");
         Assert.assertTrue("waiting for server being up",
                 ClientBase.waitForServerUp(HOSTPORT, CONNECTION_TIMEOUT));
+<<<<<<< HEAD
         ZooKeeper zk = new ZooKeeper(HOSTPORT, 20000, this);
+=======
+        ZooKeeper zk = ClientBase.createZKClient(HOSTPORT);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         try {
             // we know this from the data files
             // this node is the last node in the snapshot
@@ -112,6 +128,7 @@ public class InvalidSnapshotTest extends ZKTestCase implements Watcher {
                            ClientBase.CONNECTION_TIMEOUT));
 
     }
+<<<<<<< HEAD
 
     public void process(WatchedEvent event) {
         LOG.info("Event:" + event.getState() + " " + event.getType() + " " + event.getPath());
@@ -121,4 +138,6 @@ public class InvalidSnapshotTest extends ZKTestCase implements Watcher {
             startSignal.countDown();
         }
     }
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 }

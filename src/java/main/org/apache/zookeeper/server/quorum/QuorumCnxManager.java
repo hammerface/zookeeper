@@ -237,9 +237,13 @@ public class QuorumCnxManager {
      * @param sid
      */
     public void testInitiateConnection(long sid) throws Exception {
+<<<<<<< HEAD
         if (LOG.isDebugEnabled()) {
             LOG.debug("Opening channel to server " + sid);
         }
+=======
+        LOG.debug("Opening channel to server " + sid);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         Socket sock = new Socket();
         setSockOpts(sock);
         sock.connect(self.getVotingView().get(sid).electionAddr, cnxTO);
@@ -434,6 +438,7 @@ public class QuorumCnxManager {
             LOG.debug("There is a connection already for server " + sid);
             return true;
         }
+<<<<<<< HEAD
         try {
 
              if (LOG.isDebugEnabled()) {
@@ -445,6 +450,16 @@ public class QuorumCnxManager {
              if (LOG.isDebugEnabled()) {
                  LOG.debug("Connected to server " + sid);
              }
+=======
+
+        Socket sock = null;
+        try {
+             LOG.debug("Opening channel to server " + sid);
+             sock = new Socket();
+             setSockOpts(sock);
+             sock.connect(electionAddr, cnxTO);
+             LOG.debug("Connected to server " + sid);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
              initiateConnection(sock, sid);
              return true;
          } catch (UnresolvedAddressException e) {
@@ -454,11 +469,19 @@ public class QuorumCnxManager {
              // detail.
              LOG.warn("Cannot open channel to " + sid
                      + " at election address " + electionAddr, e);
+<<<<<<< HEAD
+=======
+             closeSocket(sock);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
              throw e;
          } catch (IOException e) {
              LOG.warn("Cannot open channel to " + sid
                      + " at election address " + electionAddr,
                      e);
+<<<<<<< HEAD
+=======
+             closeSocket(sock);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
              return false;
          }
    
@@ -574,6 +597,13 @@ public class QuorumCnxManager {
      *            Reference to socket
      */
     private void closeSocket(Socket sock) {
+<<<<<<< HEAD
+=======
+        if (sock == null) {
+            return;
+        }
+
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         try {
             sock.close();
         } catch (IOException ie) {
@@ -614,7 +644,11 @@ public class QuorumCnxManager {
         public void run() {
             int numRetries = 0;
             InetSocketAddress addr;
+<<<<<<< HEAD
 
+=======
+            Socket client = null;
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
             while((!shutdown) && (numRetries < 3)){
                 try {
                     ss = new ServerSocket();
@@ -632,7 +666,11 @@ public class QuorumCnxManager {
                     setName(addr.toString());
                     ss.bind(addr);
                     while (!shutdown) {
+<<<<<<< HEAD
                         Socket client = ss.accept();
+=======
+                        client = ss.accept();
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
                         setSockOpts(client);
                         LOG.info("Received connection request "
                                 + client.getRemoteSocketAddress());
@@ -654,6 +692,10 @@ public class QuorumCnxManager {
                         LOG.error("Interrupted while sleeping. " +
                             "Ignoring exception", ie);
                     }
+<<<<<<< HEAD
+=======
+                    closeSocket(client);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
                 }
             }
             LOG.info("Leaving listener");
@@ -739,9 +781,13 @@ public class QuorumCnxManager {
         }
                 
         synchronized boolean finish() {
+<<<<<<< HEAD
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Calling finish for " + sid);
             }
+=======
+            LOG.debug("Calling finish for " + sid);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
             
             if(!running){
                 /*
@@ -752,16 +798,24 @@ public class QuorumCnxManager {
             
             running = false;
             closeSocket(sock);
+<<<<<<< HEAD
             // channel = null;
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 
             this.interrupt();
             if (recvWorker != null) {
                 recvWorker.finish();
             }
 
+<<<<<<< HEAD
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Removing entry from senderWorkerMap sid=" + sid);
             }
+=======
+            LOG.debug("Removing entry from senderWorkerMap sid=" + sid);
+
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
             senderWorkerMap.remove(sid, this);
             threadCnt.decrementAndGet();
             return running;
@@ -919,9 +973,13 @@ public class QuorumCnxManager {
             } finally {
                 LOG.warn("Interrupting SendWorker");
                 sw.finish();
+<<<<<<< HEAD
                 if (sock != null) {
                     closeSocket(sock);
                 }
+=======
+                closeSocket(sock);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
             }
         }
     }

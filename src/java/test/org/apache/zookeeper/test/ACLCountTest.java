@@ -22,18 +22,26 @@ import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
 
 import java.io.File;
 import java.util.ArrayList;
+<<<<<<< HEAD
 import java.util.concurrent.CountDownLatch;
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.PortAssignment;
+<<<<<<< HEAD
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
+=======
+import org.apache.zookeeper.ZKTestCase;
+import org.apache.zookeeper.ZooKeeper;
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.ACL;
@@ -44,11 +52,18 @@ import org.apache.zookeeper.server.ZooKeeperServer;
 import org.junit.Assert;
 import org.junit.Test;
 
+<<<<<<< HEAD
 public class ACLCountTest extends ZKTestCase implements Watcher {
     private static final Logger LOG = LoggerFactory.getLogger(ACLTest.class);
     private static final String HOSTPORT =
         "127.0.0.1:" + PortAssignment.unique();
     private volatile CountDownLatch startSignal;
+=======
+public class ACLCountTest extends ZKTestCase{
+    private static final Logger LOG = LoggerFactory.getLogger(ACLCountTest.class);
+    private static final String HOSTPORT =
+        "127.0.0.1:" + PortAssignment.unique();
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 
     /**
      *
@@ -86,7 +101,11 @@ public class ACLCountTest extends ZKTestCase implements Watcher {
             LOG.info("starting up the zookeeper server .. waiting");
             Assert.assertTrue("waiting for server being up",
                     ClientBase.waitForServerUp(HOSTPORT, CONNECTION_TIMEOUT));
+<<<<<<< HEAD
             zk = new ZooKeeper(HOSTPORT, CONNECTION_TIMEOUT, this);
+=======
+            zk = ClientBase.createZKClient(HOSTPORT);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 
             zk.addAuthInfo("digest", "pat:test".getBytes());
             zk.setACL("/", Ids.CREATOR_ALL_ACL, -1);
@@ -113,6 +132,7 @@ public class ACLCountTest extends ZKTestCase implements Watcher {
         f.shutdown();
         zks.shutdown();
     }
+<<<<<<< HEAD
 
 
     /*
@@ -133,4 +153,6 @@ public class ACLCountTest extends ZKTestCase implements Watcher {
         }
     }
 
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 }

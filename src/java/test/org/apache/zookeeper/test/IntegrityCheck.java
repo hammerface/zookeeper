@@ -31,7 +31,10 @@ package org.apache.zookeeper.test;
  * a value that we have previously read or set. (Each time we set a value, the
  * value will be one more than the previous set.)
  */
+<<<<<<< HEAD
 import java.io.IOException;
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 import java.util.Date;
 import java.util.HashMap;
 
@@ -39,16 +42,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
+<<<<<<< HEAD
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.AsyncCallback.DataCallback;
 import org.apache.zookeeper.AsyncCallback.StatCallback;
+<<<<<<< HEAD
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.data.Stat;
 
 public class IntegrityCheck implements Watcher, StatCallback, DataCallback {
+=======
+import org.apache.zookeeper.data.Stat;
+
+public class IntegrityCheck implements StatCallback, DataCallback {
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
     private static final Logger LOG = LoggerFactory.getLogger(IntegrityCheck.class);
 
     ZooKeeper zk;
@@ -81,8 +93,13 @@ public class IntegrityCheck implements Watcher, StatCallback, DataCallback {
     }
 
     IntegrityCheck(String hostPort, String path, int count) throws
+<<<<<<< HEAD
             IOException {
         zk = new ZooKeeper(hostPort, 30000, this);
+=======
+            Exception {
+        zk = ClientBase.createZKClient(hostPort);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         this.path = path;
         this.count = count;
     }
@@ -147,6 +164,7 @@ public class IntegrityCheck implements Watcher, StatCallback, DataCallback {
         }
     }
 
+<<<<<<< HEAD
     // watcher callback
     public void process(WatchedEvent event) {
         if(event.getState()==KeeperState.SyncConnected){
@@ -156,6 +174,8 @@ public class IntegrityCheck implements Watcher, StatCallback, DataCallback {
         }
     }
 
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
     synchronized void ensureConnected(){
         while(zk.getState()!=ZooKeeper.States.CONNECTED){
             try {

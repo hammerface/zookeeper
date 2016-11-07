@@ -25,28 +25,43 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
+<<<<<<< HEAD
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.PortAssignment;
+<<<<<<< HEAD
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
+=======
+import org.apache.zookeeper.ZKTestCase;
+import org.apache.zookeeper.ZooKeeper;
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 import org.apache.zookeeper.server.ServerCnxnFactory;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.junit.Assert;
 import org.junit.Test;
 
+<<<<<<< HEAD
 public class ClientPortBindTest extends ZKTestCase implements Watcher {
     protected static final Logger LOG = 
         LoggerFactory.getLogger(ClientPortBindTest.class);
 
     private volatile CountDownLatch startSignal;
 
+=======
+public class ClientPortBindTest extends ZKTestCase{
+    protected static final Logger LOG = 
+        LoggerFactory.getLogger(ClientPortBindTest.class);
+
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
     /**
      * Verify that the server binds to the specified address
      */
@@ -93,6 +108,7 @@ public class ClientPortBindTest extends ZKTestCase implements Watcher {
         Assert.assertTrue("waiting for server up",
                    ClientBase.waitForServerUp(HOSTPORT,
                                    CONNECTION_TIMEOUT));
+<<<<<<< HEAD
 
         startSignal = new CountDownLatch(1);
         ZooKeeper zk = new ZooKeeper(HOSTPORT, CONNECTION_TIMEOUT, this);
@@ -100,6 +116,10 @@ public class ClientPortBindTest extends ZKTestCase implements Watcher {
             startSignal.await(CONNECTION_TIMEOUT,
                     TimeUnit.MILLISECONDS);
             Assert.assertTrue("count == 0", startSignal.getCount() == 0);
+=======
+        ZooKeeper zk = ClientBase.createZKClient(HOSTPORT);
+        try {
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
             zk.close();
         } finally {
             f.shutdown();
@@ -110,6 +130,7 @@ public class ClientPortBindTest extends ZKTestCase implements Watcher {
                                                     CONNECTION_TIMEOUT));
         }
     }
+<<<<<<< HEAD
 
     public void process(WatchedEvent event) {
         LOG.info("Event:" + event.getState() + " " + event.getType() + " " + event.getPath());
@@ -119,4 +140,6 @@ public class ClientPortBindTest extends ZKTestCase implements Watcher {
             startSignal.countDown();
         }
     }
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 }

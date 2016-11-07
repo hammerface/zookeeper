@@ -1866,6 +1866,8 @@ server.3=zoo3:2888:3888</pre>
 <p>The port the embedded Jetty server listens on.  Defaults to 8080.</p>
 </dd>
 
+<<<<<<< HEAD
+=======
             
 <dt>
 <term>admin.idleTimeout</term>
@@ -1877,6 +1879,7 @@ server.3=zoo3:2888:3888</pre>
 </dd>
 
 
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
           
 <dt>
 <term>admin.commandURL</term>

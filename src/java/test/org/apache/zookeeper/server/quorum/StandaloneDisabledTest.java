@@ -161,13 +161,21 @@ public class StandaloneDisabledTest extends QuorumPeerTestBase {
      */
     private void startServer(int id, String config) throws Exception {
         peers[id] = new MainThread(id, clientPorts[id], config);
+<<<<<<< HEAD
         zkHandles[id] = new ZooKeeper("127.0.0.1:" + clientPorts[id],
                                                 CONNECTION_TIMEOUT, this);
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         peers[id].start();
         Assert.assertTrue("Server " + id + " is not up",
                           ClientBase.waitForServerUp("127.0.0.1:" + clientPorts[id], CONNECTION_TIMEOUT));
         Assert.assertTrue("Error- Server started in Standalone Mode!",
+<<<<<<< HEAD
                           peers[id].isQuorumPeerRunning());
+=======
+                peers[id].isQuorumPeerRunning());
+        zkHandles[id] = ClientBase.createZKClient("127.0.0.1:" + clientPorts[id]);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
     }
 
     /**

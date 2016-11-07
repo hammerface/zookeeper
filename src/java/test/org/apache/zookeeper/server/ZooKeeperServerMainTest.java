@@ -19,6 +19,10 @@
 package org.apache.zookeeper.server;
 
 import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
+<<<<<<< HEAD
+=======
+import static org.junit.Assert.fail;
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 
 import java.io.File;
 import java.io.FileWriter;
@@ -58,11 +62,26 @@ public class ZooKeeperServerMainTest extends ZKTestCase implements Watcher {
         final File confFile;
         final TestZKSMain main;
         final File tmpDir;
+<<<<<<< HEAD
 
         public MainThread(int clientPort, boolean preCreateDirs, String configs)
                 throws IOException {
             super("Standalone server with clientPort:" + clientPort);
             tmpDir = ClientBase.createTmpDir();
+=======
+        final File dataDir;
+        final File logDir;
+
+        public MainThread(int clientPort, boolean preCreateDirs, String configs)
+                throws IOException {
+            this(clientPort, preCreateDirs, ClientBase.createTmpDir(), configs);
+        }
+
+        public MainThread(int clientPort, boolean preCreateDirs, File tmpDir, String configs)
+                throws IOException {
+            super("Standalone server with clientPort:" + clientPort);
+            this.tmpDir = tmpDir;
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
             confFile = new File(tmpDir, "zoo.cfg");
 
             FileWriter fwriter = new FileWriter(confFile);
@@ -73,13 +92,19 @@ public class ZooKeeperServerMainTest extends ZKTestCase implements Watcher {
                 fwriter.write(configs);
             }
 
+<<<<<<< HEAD
             File dataDir = new File(tmpDir, "data");
             String dir = dataDir.toString();
             String dirLog = dataDir.toString() + "_txnlog";
+=======
+            dataDir = new File(this.tmpDir, "data");
+            logDir = new File(dataDir.toString() + "_txnlog");
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
             if (preCreateDirs) {
                 if (!dataDir.mkdir()) {
                     throw new IOException("unable to mkdir " + dataDir);
                 }
+<<<<<<< HEAD
                 dirLog = dataDir.toString();
             }
             
@@ -87,6 +112,17 @@ public class ZooKeeperServerMainTest extends ZKTestCase implements Watcher {
             dirLog = PathUtils.normalizeFileSystemPath(dirLog);
             fwriter.write("dataDir=" + dir + "\n");
             fwriter.write("dataLogDir=" + dirLog + "\n");
+=======
+                if (!logDir.mkdir()) {
+                    throw new IOException("unable to mkdir " + logDir);
+                }
+            }
+            
+            String normalizedDataDir = PathUtils.normalizeFileSystemPath(dataDir.toString());
+            String normalizedLogDir = PathUtils.normalizeFileSystemPath(logDir.toString());
+            fwriter.write("dataDir=" + normalizedDataDir + "\n");
+            fwriter.write("dataLogDir=" + normalizedLogDir + "\n");
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
             fwriter.write("clientPort=" + clientPort + "\n");
             fwriter.flush();
             fwriter.close();
@@ -124,6 +160,13 @@ public class ZooKeeperServerMainTest extends ZKTestCase implements Watcher {
                     throw new IOException("Failed to delete file: " + f);
                 }
         }
+<<<<<<< HEAD
+=======
+
+        ServerCnxnFactory getCnxnFactory() {
+            return main.getCnxnFactory();
+        }
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
     }
 
     public static  class TestZKSMain extends ZooKeeperServerMain {
@@ -133,6 +176,134 @@ public class ZooKeeperServerMainTest extends ZKTestCase implements Watcher {
     }
 
     /**
+<<<<<<< HEAD
+=======
+     * Test case for https://issues.apache.org/jira/browse/ZOOKEEPER-2247.
+     * Test to verify that even after non recoverable error (error while
+     * writing transaction log), ZooKeeper is still available.
+     */
+    @Test(timeout = 30000)
+    public void testNonRecoverableError() throws Exception {
+        ClientBase.setupTestEnv();
+
+        final int CLIENT_PORT = PortAssignment.unique();
+
+        MainThread main = new MainThread(CLIENT_PORT, true, null);
+        main.start();
+
+        Assert.assertTrue("waiting for server being up",
+                ClientBase.waitForServerUp("127.0.0.1:" + CLIENT_PORT,
+                        CONNECTION_TIMEOUT));
+
+
+        ZooKeeper zk = new ZooKeeper("127.0.0.1:" + CLIENT_PORT,
+                ClientBase.CONNECTION_TIMEOUT, this);
+
+        zk.create("/foo1", "foobar".getBytes(), Ids.OPEN_ACL_UNSAFE,
+                CreateMode.PERSISTENT);
+        Assert.assertEquals(new String(zk.getData("/foo1", null, null)), "foobar");
+
+        // inject problem in server
+        ZooKeeperServer zooKeeperServer = main.getCnxnFactory()
+                .getZooKeeperServer();
+        FileTxnSnapLog snapLog = zooKeeperServer.getTxnLogFactory();
+        FileTxnSnapLog fileTxnSnapLogWithError = new FileTxnSnapLog(
+                snapLog.getDataDir(), snapLog.getSnapDir()) {
+            @Override
+            public void commit() throws IOException {
+                throw new IOException("Input/output error");
+            }
+        };
+        ZKDatabase newDB = new ZKDatabase(fileTxnSnapLogWithError);
+        zooKeeperServer.setZKDatabase(newDB);
+
+        try {
+            // do create operation, so that injected IOException is thrown
+            zk.create("/foo2", "foobar".getBytes(), Ids.OPEN_ACL_UNSAFE,
+                    CreateMode.PERSISTENT);
+            fail("IOException is expected as error is injected in transaction log commit funtionality");
+        } catch (Exception e) {
+            // do nothing
+        }
+        zk.close();
+        Assert.assertTrue("waiting for server down",
+                ClientBase.waitForServerDown("127.0.0.1:" + CLIENT_PORT,
+                        ClientBase.CONNECTION_TIMEOUT));
+        fileTxnSnapLogWithError.close();
+        main.shutdown();
+        main.deleteDirs();
+    }
+
+    @Test(timeout = 30000)
+    public void testReadOnlySnapshotDir() throws Exception {
+        ClientBase.setupTestEnv();
+        final int CLIENT_PORT = PortAssignment.unique();
+
+        // Start up the ZK server to automatically create the necessary directories
+        // and capture the directory where data is stored
+        MainThread main = new MainThread(CLIENT_PORT, true, null);
+        File tmpDir = main.tmpDir;
+        main.start();
+        Assert.assertTrue("waiting for server being up", ClientBase
+                .waitForServerUp("127.0.0.1:" + CLIENT_PORT,
+                        CONNECTION_TIMEOUT / 2));
+        main.shutdown();
+
+        // Make the snapshot directory read only
+        File snapDir = new File(main.dataDir, FileTxnSnapLog.version + FileTxnSnapLog.VERSION);
+        snapDir.setWritable(false);
+
+        // Restart ZK and observe a failure
+        main = new MainThread(CLIENT_PORT, false, tmpDir, null);
+        main.start();
+
+        Assert.assertFalse("waiting for server being up", ClientBase
+                .waitForServerUp("127.0.0.1:" + CLIENT_PORT,
+                        CONNECTION_TIMEOUT / 2));
+
+        main.shutdown();
+
+        snapDir.setWritable(true);
+
+        main.deleteDirs();
+    }
+
+    @Test(timeout = 30000)
+    public void testReadOnlyTxnLogDir() throws Exception {
+        ClientBase.setupTestEnv();
+        final int CLIENT_PORT = PortAssignment.unique();
+
+        // Start up the ZK server to automatically create the necessary directories
+        // and capture the directory where data is stored
+        MainThread main = new MainThread(CLIENT_PORT, true, null);
+        File tmpDir = main.tmpDir;
+        main.start();
+        Assert.assertTrue("waiting for server being up", ClientBase
+                .waitForServerUp("127.0.0.1:" + CLIENT_PORT,
+                        CONNECTION_TIMEOUT / 2));
+        main.shutdown();
+
+        // Make the transaction log directory read only
+        File logDir = new File(main.logDir, FileTxnSnapLog.version + FileTxnSnapLog.VERSION);
+        logDir.setWritable(false);
+
+        // Restart ZK and observe a failure
+        main = new MainThread(CLIENT_PORT, false, tmpDir, null);
+        main.start();
+
+        Assert.assertFalse("waiting for server being up", ClientBase
+                .waitForServerUp("127.0.0.1:" + CLIENT_PORT,
+                        CONNECTION_TIMEOUT / 2));
+
+        main.shutdown();
+
+        logDir.setWritable(true);
+
+        main.deleteDirs();
+    }
+
+    /**
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
      * Verify the ability to start a standalone server instance.
      */
     @Test
@@ -148,9 +319,17 @@ public class ZooKeeperServerMainTest extends ZKTestCase implements Watcher {
                 ClientBase.waitForServerUp("127.0.0.1:" + CLIENT_PORT,
                         CONNECTION_TIMEOUT));
 
+<<<<<<< HEAD
 
         ZooKeeper zk = new ZooKeeper("127.0.0.1:" + CLIENT_PORT,
                 ClientBase.CONNECTION_TIMEOUT, this);
+=======
+        clientConnected = new CountDownLatch(1);
+        ZooKeeper zk = new ZooKeeper("127.0.0.1:" + CLIENT_PORT,
+                ClientBase.CONNECTION_TIMEOUT, this);
+        Assert.assertTrue("Failed to establish zkclient connection!",
+                clientConnected.await(CONNECTION_TIMEOUT, TimeUnit.MILLISECONDS));
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 
         zk.create("/foo", "foobar".getBytes(), Ids.OPEN_ACL_UNSAFE,
                 CreateMode.PERSISTENT);
@@ -210,9 +389,17 @@ public class ZooKeeperServerMainTest extends ZKTestCase implements Watcher {
         Assert.assertTrue("waiting for server being up",
                 ClientBase.waitForServerUp("127.0.0.1:" + CLIENT_PORT,
                         CONNECTION_TIMEOUT));
+<<<<<<< HEAD
 
         ZooKeeper zk = new ZooKeeper("127.0.0.1:" + CLIENT_PORT,
                 ClientBase.CONNECTION_TIMEOUT, this);
+=======
+        clientConnected = new CountDownLatch(1);
+        ZooKeeper zk = new ZooKeeper("127.0.0.1:" + CLIENT_PORT,
+                ClientBase.CONNECTION_TIMEOUT, this);
+        Assert.assertTrue("Failed to establish zkclient connection!",
+                clientConnected.await(CONNECTION_TIMEOUT, TimeUnit.MILLISECONDS));
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 
         zk.create("/foo", "foobar".getBytes(), Ids.OPEN_ACL_UNSAFE,
                 CreateMode.PERSISTENT);

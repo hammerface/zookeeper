@@ -431,6 +431,7 @@ public class Learner {
                     break;
                 case Leader.COMMIT:
                 case Leader.COMMITANDACTIVATE:
+<<<<<<< HEAD
                     if (!snapshotTaken) {
                         pif = packetsNotCommitted.peekFirst();
                         if (pif.hdr.getZxid() != qp.getZxid()) {
@@ -444,6 +445,21 @@ public class Learner {
                                    throw new Exception("changes proposed in reconfig");
                                 }
                            }
+=======
+                    pif = packetsNotCommitted.peekFirst();
+                    if (pif.hdr.getZxid() == qp.getZxid() && qp.getType() == Leader.COMMITANDACTIVATE) {
+                        QuorumVerifier qv = self.configFromString(new String(((SetDataTxn) pif.rec).getData()));
+                        boolean majorChange = self.processReconfig(qv, ByteBuffer.wrap(qp.getData()).getLong(),
+                                qp.getZxid(), true);
+                        if (majorChange) {
+                            throw new Exception("changes proposed in reconfig");
+                        }
+                    }
+                    if (!snapshotTaken) {
+                        if (pif.hdr.getZxid() != qp.getZxid()) {
+                            LOG.warn("Committing " + qp.getZxid() + ", but next proposal is " + pif.hdr.getZxid());
+                        } else {
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
                             zk.processTxn(pif.hdr, pif.rec);
                             packetsNotCommitted.remove();
                         }
@@ -622,4 +638,11 @@ public class Learner {
             zk.shutdown();
         }
     }
+<<<<<<< HEAD
+=======
+
+    boolean isRunning() {
+        return self.isRunning() && zk.isRunning();
+    }
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 }

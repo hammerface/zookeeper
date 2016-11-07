@@ -21,6 +21,7 @@
  */
 package org.apache.zookeeper.test;
 
+<<<<<<< HEAD
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -28,6 +29,11 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+=======
+
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.PortAssignment;
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.client.ZKClientConfig;
@@ -100,6 +106,7 @@ public class SSLTest extends QuorumPeerTestBase {
             Assert.assertTrue("waiting for server " + i + " being up",
                     ClientBase.waitForServerUp("127.0.0.1:" + clientPorts[i], TIMEOUT));
 
+<<<<<<< HEAD
             final CountDownLatch latch = new CountDownLatch(1);
             ZooKeeper zk = new ZooKeeper("127.0.0.1:" + secureClientPorts[i], TIMEOUT,
                     new Watcher() {
@@ -114,6 +121,9 @@ public class SSLTest extends QuorumPeerTestBase {
             if (!latch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
                 Assert.fail("Timeout connecting to ZK server secure port");
             }
+=======
+            ZooKeeper zk = ClientBase.createZKClient("127.0.0.1:" + secureClientPorts[i], TIMEOUT);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
             // Do a simple operation to make sure the connection is fine.
             zk.create("/test", "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             zk.delete("/test", -1);
@@ -138,6 +148,7 @@ public class SSLTest extends QuorumPeerTestBase {
         MainThread mt = new MainThread(MainThread.UNSET_MYID, "", secureClientPort, false);
         mt.start();
 
+<<<<<<< HEAD
         final CountDownLatch latch = new CountDownLatch(1);
         ZooKeeper zk = new ZooKeeper("127.0.0.1:" + secureClientPort, TIMEOUT,
                 new Watcher() {
@@ -152,6 +163,9 @@ public class SSLTest extends QuorumPeerTestBase {
         if (!latch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
             Assert.fail("Timeout connecting to ZK server secure port");
         }
+=======
+        ZooKeeper zk = ClientBase.createZKClient("127.0.0.1:" + secureClientPort, TIMEOUT);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         zk.create("/test", "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         zk.delete("/test", -1);
         zk.close();

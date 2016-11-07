@@ -24,13 +24,16 @@ import java.util.List;
 
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
+<<<<<<< HEAD:src/java/test/org/apache/zookeeper/test/SledgeHammer.java
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c:src/java/test/org/apache/zookeeper/test/SledgeHammer.java
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
-public class SledgeHammer extends Thread implements Watcher {
+public class SledgeHammer extends Thread{
     ZooKeeper zk;
 
     int count;
@@ -38,8 +41,13 @@ public class SledgeHammer extends Thread implements Watcher {
     int readsPerWrite;
 
     public SledgeHammer(String hosts, int count, int readsPerWrite)
+<<<<<<< HEAD:src/java/test/org/apache/zookeeper/test/SledgeHammer.java
             throws IOException {
         zk = new ZooKeeper(hosts, 10000, this);
+=======
+            throws Exception {
+        zk = ClientBase.createZKClient(hosts, 10000);
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c:src/java/test/org/apache/zookeeper/test/SledgeHammer.java
         this.count = count;
         this.readsPerWrite = readsPerWrite;
     }
@@ -98,7 +106,11 @@ public class SledgeHammer extends Thread implements Watcher {
      * @throws NumberFormatException
      */
     public static void main(String[] args) throws NumberFormatException,
+<<<<<<< HEAD:src/java/test/org/apache/zookeeper/test/SledgeHammer.java
             IOException {
+=======
+            Exception {
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c:src/java/test/org/apache/zookeeper/test/SledgeHammer.java
         if (args.length != 3) {
             System.err
                     .println("USAGE: SledgeHammer zookeeper_server reps reads_per_rep");
@@ -109,6 +121,7 @@ public class SledgeHammer extends Thread implements Watcher {
         h.start();
         System.exit(0);
     }
+<<<<<<< HEAD:src/java/test/org/apache/zookeeper/test/SledgeHammer.java
 
     public void process(WatchedEvent event) {
         synchronized (this) {
@@ -116,4 +129,6 @@ public class SledgeHammer extends Thread implements Watcher {
         }
     }
 
+=======
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c:src/java/test/org/apache/zookeeper/test/SledgeHammer.java
 }

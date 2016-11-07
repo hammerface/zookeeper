@@ -19,6 +19,10 @@
 package org.apache.zookeeper.server;
 
 import java.io.IOException;
+<<<<<<< HEAD
+=======
+import java.util.concurrent.CountDownLatch;
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 import java.util.concurrent.TimeUnit;
 
 import javax.management.JMException;
@@ -118,9 +122,21 @@ public class ZooKeeperServerMain {
             // run() in this thread.
             // create a file logger url from the command line args
             txnLog = new FileTxnSnapLog(config.dataLogDir, config.dataDir);
+<<<<<<< HEAD
             ZooKeeperServer zkServer = new ZooKeeperServer( txnLog,
                     config.tickTime, config.minSessionTimeout, config.maxSessionTimeout, null);
 
+=======
+            final ZooKeeperServer zkServer = new ZooKeeperServer(txnLog,
+                    config.tickTime, config.minSessionTimeout, config.maxSessionTimeout, null);
+
+            // Registers shutdown handler which will be used to know the
+            // server error or shutdown state changes.
+            final CountDownLatch shutdownLatch = new CountDownLatch(1);
+            zkServer.registerServerShutdownHandler(
+                    new ZooKeeperServerShutdownHandler(shutdownLatch));
+
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
             // Start Admin server
             adminServer = AdminServerFactory.createAdminServer();
             adminServer.setZooKeeperServer(zkServer);
@@ -146,14 +162,27 @@ public class ZooKeeperServerMain {
             );
             containerManager.start();
 
+<<<<<<< HEAD
+=======
+            // Watch status of ZooKeeper server. It will do a graceful shutdown
+            // if the server is not running or hits an internal error.
+            shutdownLatch.await();
+
+            shutdown();
+
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
             if (cnxnFactory != null) {
                 cnxnFactory.join();
             }
             if (secureCnxnFactory != null) {
                 secureCnxnFactory.join();
             }
+<<<<<<< HEAD
 
             if (zkServer.isRunning()) {
+=======
+            if (zkServer.canShutdown()) {
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
                 zkServer.shutdown();
             }
         } catch (InterruptedException e) {
@@ -180,9 +209,23 @@ public class ZooKeeperServerMain {
             secureCnxnFactory.shutdown();
         }
         try {
+<<<<<<< HEAD
             adminServer.shutdown();
+=======
+            if (adminServer != null) {
+                adminServer.shutdown();
+            }
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
         } catch (AdminServerException e) {
             LOG.warn("Problem stopping AdminServer", e);
         }
     }
+<<<<<<< HEAD
+=======
+
+    // VisibleForTesting
+    ServerCnxnFactory getCnxnFactory() {
+        return cnxnFactory;
+    }
+>>>>>>> 6bd38e3d89ecc03285459be3e511d32f487ced0c
 }
